@@ -11,17 +11,12 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.LinearGradient;
-import android.graphics.Shader;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.RectShape;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.IBinder;
 import android.provider.Settings;
@@ -39,15 +34,14 @@ import android.view.animation.AccelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import org.json.JSONArray;
+import org.json.JSONException;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     final int PERMISSION_REQUEST_ID = 0;
@@ -61,6 +55,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     LocationServiceConnection locationServiceConnection;
     ImageView weatherIcon;
     ImageView weatherBG;
+    ImageButton refreshButton;
     TextView locationText;
     TextView weatherText;
     TextView infoText;
@@ -92,14 +87,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         locationServiceConnection = new LocationServiceConnection();
 
-        weatherDisplayHandler = new WeatherDisplayHandler(getApplicationContext());
+        weatherDisplayHandler = new WeatherDisplayHandler();
 
-        weatherIcon  = (ImageView)   findViewById(R.id.imageView);
-        weatherBG    = (ImageView)   findViewById(R.id.weatherBG);
-        locationText = (TextView)    findViewById(R.id.locationTextView);
-        weatherText  = (TextView)    findViewById(R.id.weatherTextView);
-        infoText     = (TextView)    findViewById(R.id.infoText);
-        progressBar  = (ProgressBar) findViewById(R.id.progressBar);
+        weatherIcon   = (ImageView)   findViewById(R.id.imageView);
+        weatherBG     = (ImageView)   findViewById(R.id.weatherBG);
+        refreshButton = (ImageButton) findViewById(R.id.refreshButton);
+        locationText  = (TextView)    findViewById(R.id.locationTextView);
+        weatherText   = (TextView)    findViewById(R.id.weatherTextView);
+        infoText      = (TextView)    findViewById(R.id.infoText);
+        progressBar   = (ProgressBar) findViewById(R.id.progressBar);
 
         weatherText.setText("Trying to find you...");
 
@@ -142,6 +138,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     public void getWeather() {
+        refreshButton.setClickable(false);
+
         if (weatherIcon.getAlpha() == 1) {
             weatherIcon.setAlpha(0f);
             progressBar.setAlpha(1f);
@@ -165,6 +163,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         LocalBroadcastManager.getInstance(this).registerReceiver(new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
+                refreshButton.setClickable(true);
+
                 if (weatherIcon.getAlpha() == 0) {
                     weatherIcon.setAlpha(1f);
                     progressBar.setAlpha(0);
@@ -180,6 +180,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     int currentHour = intent.getIntExtra("currentHour", 0);
                     int sunrise = intent.getIntExtra("sunrise", 6);
                     int sunset = intent.getIntExtra("sunset", 21);
+
+                    String jsonArray = intent.getStringExtra("forecast");
+
+                    try {
+                        JSONArray array = new JSONArray(jsonArray);
+                        System.out.println(array.getString(1));
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
 
                     locationText.setText(location);
 
@@ -227,8 +236,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 System.out.println("PERMISSION GIVEN");
                 try {
-//                    Intent intent = new Intent(this, LocationService.class);
-//                    startService(intent);
+                    Intent intent = new Intent(this, LocationService.class);
+                    startService(intent);
                 } catch (SecurityException e) {
                     e.printStackTrace();
                 }
@@ -275,53 +284,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
             Log.d("MainActivity", "MainActivity has disconnected the service");
-        }
-    }
-
-    private class DownloadImageTask extends AsyncTask<String, Void, Bitmap> {
-        ImageView weatherIcon;
-
-        public DownloadImageTask(ImageView weatherIcon) {
-            this.weatherIcon = weatherIcon;
-        }
-
-        @Override
-        protected Bitmap doInBackground(String... params) {
-            final String REQUEST_METHOD = "GET";
-            final int READ_TIMEOUT = 15000;
-            final int CONNECTION_TIMEOUT = 15000;
-            String stringUrl = params[0];
-
-            Bitmap icon = null;
-            try {
-                URL myUrl = new URL(stringUrl);
-
-                HttpURLConnection connection = (HttpURLConnection) myUrl.openConnection();
-
-                connection.setRequestMethod(REQUEST_METHOD);
-                connection.setReadTimeout(READ_TIMEOUT);
-                connection.setConnectTimeout(CONNECTION_TIMEOUT);
-
-                connection.connect();
-
-                InputStream in = connection.getInputStream();
-
-                icon = BitmapFactory.decodeStream(in);
-
-                in.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            return icon;
-        }
-
-        @Override
-        protected void onPostExecute(Bitmap bitmap) {
-            weatherIcon.setImageResource(R.drawable.ic_moon_50);
-            weatherIcon.setColorFilter(Color.DKGRAY);
-//            weatherIcon.setImageBitmap(bitmap);
-            weatherIcon.setScaleType(ImageView.ScaleType.FIT_XY);
         }
     }
 

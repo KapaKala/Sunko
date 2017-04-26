@@ -1,29 +1,13 @@
 package fi.hk.sunko;
 
-import android.content.Context;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Shader;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.RectShape;
-import android.util.Log;
 
-import java.util.Calendar;
-
-public class WeatherDisplayHandler {
-    Context context;
-//    Calendar calendar;
-//    int currentTimeHours;
-
-    public WeatherDisplayHandler(Context context) {
-        this.context = context;
-
-    }
-
-    public int setImage(String weatherType, int currentHour, int sunrise, int sunset) {
-//        calendar = Calendar.getInstance();
-//        currentTimeHours = calendar.get(Calendar.HOUR_OF_DAY);
-//        Log.d("CHECKING HOURS", "Current hour: " + currentTimeHours);
+class WeatherDisplayHandler {
+    int setImage(String weatherType, int currentHour, int sunrise, int sunset) {
 
         if (currentHour < sunset && currentHour > sunrise) {
             switch (weatherType) {
@@ -82,7 +66,7 @@ public class WeatherDisplayHandler {
 
     }
 
-    public Shader setBackgroundGradient(int h, String weatherType, int currentHour, int sunrise, int sunset) {
+    Shader setBackgroundGradient(int h, String weatherType, int currentHour, int sunrise, int sunset) {
         ShapeDrawable mDrawable = new ShapeDrawable(new RectShape());
         mDrawable.getPaint().setShader(new LinearGradient(0, 0, 0, h, Color.parseColor("#FF4E50"), Color.parseColor("#F9D423"), Shader.TileMode.REPEAT));
 
