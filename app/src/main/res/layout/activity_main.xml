@@ -13,7 +13,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:alpha="0"
-        android:src="@drawable/clear_bg"
          />
 
 
@@ -68,16 +67,29 @@
         android:onClick="refresh"
         android:tint="#feffffff"
         app:srcCompat="@drawable/ic_refresh_black_24dp"
-        android:layout_alignParentTop="true"
+        android:layout_marginEnd="24dp"
+        android:layout_marginTop="42dp"
         android:layout_alignParentEnd="true"
-        android:layout_marginEnd="20dp"
-        android:layout_marginTop="23dp" />
+        android:layout_marginBottom="24dp" />
+
+    <ImageButton
+        android:id="@+id/editLocationButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        android:onClick="pickCityDialog"
+        android:tint="#feffffff"
+        app:srcCompat="@drawable/ic_search_black_24dp"
+        android:layout_marginStart="24dp"
+        android:layout_alignTop="@+id/refreshButton" />
 
     <TextView
         android:id="@+id/locationTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentStart="true"
-        android:layout_alignTop="@+id/refreshButton"
-        android:layout_marginStart="23dp" />
+        android:layout_marginLeft="1dp"
+        android:layout_marginTop="2dp"
+        android:layout_toEndOf="@+id/editLocationButton"
+        android:layout_alignBottom="@+id/editLocationButton"
+        android:layout_alignTop="@+id/editLocationButton" />
 </RelativeLayout>
