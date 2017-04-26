@@ -28,8 +28,12 @@ public class WeatherDisplayHandler {
                     return R.drawable.ic_cloud;
                 case "Rain":
                     return R.drawable.ic_cloud_rain;
+                case "Snow":
+                    return R.drawable.ic_snow;
                 case "Partly Cloudy":
                     return R.drawable.ic_cloud_sun;
+                case "Ice Pellets":
+                    return R.drawable.ic_cloud_hail;
                 default:
                     return 0;
             }
@@ -41,8 +45,12 @@ public class WeatherDisplayHandler {
                     return R.drawable.ic_cloud;
                 case "Rain":
                     return R.drawable.ic_cloud_rain;
+                case "Snow":
+                    return R.drawable.ic_snow;
                 case "Partly Cloudy":
                     return R.drawable.ic_cloud_moon;
+                case "Ice Pellets":
+                    return R.drawable.ic_cloud_hail;
                 default:
                     return 0;
             }

@@ -53,12 +53,16 @@ public class LocationService extends Service implements LocationListener {
             String stringTime = currentObservation.getString("local_time_rfc822");
             int currentHour = Integer.parseInt(stringTime.substring(17, 19));
 
+            String location = currentObservation.getJSONObject("display_location").getString("city") + ", " +
+                    currentObservation.getJSONObject("display_location").getString("country");
+
             JSONObject sunPhase = info.getJSONObject("sun_phase");
             int sunrise = sunPhase.getJSONObject("sunrise").getInt("hour");
             int sunset = sunPhase.getJSONObject("sunset").getInt("hour");
             Log.d("SUN PHASE", "" + sunPhase.toString());
 
             Intent intent = new Intent("weatherInfo");
+            intent.putExtra("location", location);
             intent.putExtra("iconuri", currentObservation.getString("icon_url"));
             intent.putExtra("weatherType", currentObservation.getString("weather"));
             intent.putExtra("temperature", currentObservation.getString("temp_c"));

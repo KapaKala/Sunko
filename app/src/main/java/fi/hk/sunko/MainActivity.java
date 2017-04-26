@@ -20,19 +20,12 @@ import android.graphics.drawable.shapes.RectShape;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
-import android.media.AudioManager;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -40,22 +33,17 @@ import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.animation.AccelerateInterpolator;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.URI;
 import java.net.URL;
-import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     final int PERMISSION_REQUEST_ID = 0;
@@ -65,6 +53,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     LocationServiceConnection locationServiceConnection;
     ImageView weatherIcon;
     ImageView weatherBG;
+    TextView locationText;
     TextView weatherText;
     TextView infoText;
     ProgressBar progressBar;
@@ -97,11 +86,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         weatherDisplayHandler = new WeatherDisplayHandler(getApplicationContext());
 
-        weatherIcon = (ImageView)   findViewById(R.id.imageView);
-        weatherBG   = (ImageView)   findViewById(R.id.weatherBG);
-        weatherText = (TextView)    findViewById(R.id.weatherTextView);
-        infoText    = (TextView)    findViewById(R.id.infoText);
-        progressBar = (ProgressBar) findViewById(R.id.progressBar);
+        weatherIcon  = (ImageView)   findViewById(R.id.imageView);
+        weatherBG    = (ImageView)   findViewById(R.id.weatherBG);
+        locationText = (TextView)    findViewById(R.id.locationTextView);
+        weatherText  = (TextView)    findViewById(R.id.weatherTextView);
+        infoText     = (TextView)    findViewById(R.id.infoText);
+        progressBar  = (ProgressBar) findViewById(R.id.progressBar);
 
         weatherText.setText("Trying to find you...");
 
@@ -143,10 +133,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-
+    public void getWeather() {
         startService(intent);
 
         if(!bound) {
@@ -165,11 +152,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     weatherIcon.setAlpha(1f);
                     progressBar.setAlpha(0);
                 }
+                String location = intent.getStringExtra("location");
                 String weatherType = intent.getStringExtra("weatherType");
                 String temperature = intent.getStringExtra("temperature");
                 int currentHour = intent.getIntExtra("currentHour", 0);
                 int sunrise = intent.getIntExtra("sunrise", 6);
                 int sunset = intent.getIntExtra("sunset", 21);
+
+                locationText.setText(location);
 
                 weatherIcon.setImageResource(weatherDisplayHandler.setImage(weatherType, currentHour, sunrise, sunset));
                 setWeatherText(weatherType, temperature);
@@ -200,10 +190,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }, new IntentFilter("weatherInfo"));
     }
 
-    public void click(View v) {
-        Intent intent = new Intent(this, LocationService.class);
-        startService(intent);
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        getWeather();
     }
+
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -238,6 +231,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
 
+    }
+
+    public void refresh(View v) {
+        Animation rotation = AnimationUtils.loadAnimation(this, R.anim.refresh_rotate);
+        v.startAnimation(rotation);
+        getWeather();
     }
 
 
