@@ -28,7 +28,7 @@ public class LocationService extends Service implements LocationListener {
     boolean isLocationFound = false;
     boolean usingLocation;
 
-    LocalBroadcastManager manager = LocalBroadcastManager.getInstance(this);
+    LocalBroadcastManager manager = LocalBroadcastManager.getInstance(getBaseContext());
     IBinder localBinder = new LocalBinder();
 
 
@@ -39,9 +39,6 @@ public class LocationService extends Service implements LocationListener {
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         usingLocation = intent.getBooleanExtra("usingLocation", true);
 
-        Log.d("LOCATIONSERVICE INTENT", "usingLocation: " + usingLocation + ", " +
-                "City: " + intent.getStringExtra("locationCity") + ", " +
-                "Country: " + intent.getStringExtra("locationCountry"));
         if (usingLocation) {
             doGPS();
         } else {

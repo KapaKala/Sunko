@@ -26,9 +26,12 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.Animation;
@@ -42,6 +45,9 @@ import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     final int PERMISSION_REQUEST_ID = 0;
@@ -62,6 +68,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     ProgressBar progressBar;
     Intent intent;
 
+    JSONArray forecast;
+
+    RecyclerView rv;
     WeatherDisplayHandler weatherDisplayHandler;
 
 //    private SensorManager mSensorManager;
@@ -85,6 +94,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        forecast = new JSONArray();
+
         locationServiceConnection = new LocationServiceConnection();
 
         weatherDisplayHandler = new WeatherDisplayHandler();
@@ -96,6 +107,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         weatherText   = (TextView)    findViewById(R.id.weatherTextView);
         infoText      = (TextView)    findViewById(R.id.infoText);
         progressBar   = (ProgressBar) findViewById(R.id.progressBar);
+
+        rv = (RecyclerView)findViewById(R.id.rv);
+        rv.setHasFixedSize(true);
+
 
         weatherText.setText("Trying to find you...");
 
@@ -183,12 +198,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                     String jsonArray = intent.getStringExtra("forecast");
 
+
                     try {
                         JSONArray array = new JSONArray(jsonArray);
+                        forecast = array;
                         System.out.println(array.getString(1));
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
+
+                    RVAdapter adapter = new RVAdapter(forecast);
+                    rv.setAdapter(adapter);
+                    LinearLayoutManager llm = new LinearLayoutManager(getApplicationContext(), LinearLayoutManager.HORIZONTAL, false);
+                    rv.setLayoutManager(llm);
 
                     locationText.setText(location);
 
@@ -346,5 +368,53 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         });
 
         alert.show();
+
+    }
+
+    public class RVAdapter extends RecyclerView.Adapter<RVAdapter.ForecastHolder>{
+        JSONArray forecast;
+
+        RVAdapter(JSONArray forecast) {
+            System.out.println("WE ARE CREATING THE RVADAPTER HERE");
+            this.forecast = forecast;
+        }
+
+        @Override
+        public ForecastHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.rv, parent, false);
+            return new ForecastHolder(v);
+        }
+
+        @Override
+        public void onBindViewHolder(ForecastHolder holder, int position) {
+            try {
+                JSONObject dayforecast = (JSONObject) forecast.get(position);
+                holder.tv.setText(dayforecast.getJSONObject("high").getString("celsius") + "|" +
+                                  dayforecast.getJSONObject("low").getString("celsius"));
+                holder.iv.setImageResource(weatherDisplayHandler.setImage(dayforecast.getString("conditions"), 12, 6, 21));
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            holder.tv.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+            holder.tv.setTextSize(16);
+        }
+
+        @Override
+        public int getItemCount() {
+            return forecast.length();
+        }
+
+        public class ForecastHolder extends RecyclerView.ViewHolder {
+            TextView tv;
+            ImageView iv;
+
+            ForecastHolder(View itemView) {
+                super(itemView);
+                tv = (TextView) itemView.findViewById(R.id.rvtv);
+                iv = (ImageView) itemView.findViewById(R.id.rviv);
+            }
+        }
+
     }
 }
