@@ -57,4 +57,27 @@
         android:textAlignment="center"
         android:textColor="@android:color/background_light"
         android:textSize="30sp" />
+
+    <ImageButton
+        android:id="@+id/refreshButton"
+        style="@android:style/Widget.Holo.Light.ImageButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        android:elevation="2dp"
+        android:onClick="refresh"
+        android:tint="#feffffff"
+        app:srcCompat="@drawable/ic_refresh_black_24dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="20dp"
+        android:layout_marginTop="23dp" />
+
+    <TextView
+        android:id="@+id/locationTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignTop="@+id/refreshButton"
+        android:layout_marginStart="23dp" />
 </RelativeLayout>
