@@ -16,13 +16,13 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.concurrent.ExecutionException;
 
 public class LocationService extends Service implements LocationListener {
-    final int PERMISSION_REQUEST_ID = 0;
     LocationManager locationManager;
     Location location;
     boolean isLocationFound = false;
@@ -52,7 +52,7 @@ public class LocationService extends Service implements LocationListener {
     }
 
     public void getWeatherInfo(Object param1, Object param2) {
-        String url = "";
+        String url;
         if (usingLocation) {
             url = "http://api.wunderground.com/api/9c724765b2ea3c24/geolookup/astronomy/conditions/forecast/q/" + param1 + "," + param2 + ".json";
         } else {
@@ -78,6 +78,10 @@ public class LocationService extends Service implements LocationListener {
             int sunset = sunPhase.getJSONObject("sunset").getInt("hour");
             Log.d("SUN PHASE", "" + sunPhase.toString());
 
+            JSONArray forecast = info.getJSONObject("forecast").getJSONObject("simpleforecast").getJSONArray("forecastday");
+
+            System.out.println(forecast);
+
             Intent intent = new Intent("weatherInfo");
             intent.putExtra("location", location);
             intent.putExtra("iconuri", currentObservation.getString("icon_url"));
@@ -86,10 +90,9 @@ public class LocationService extends Service implements LocationListener {
             intent.putExtra("currentHour", currentHour);
             intent.putExtra("sunrise", sunrise);
             intent.putExtra("sunset", sunset);
+            intent.putExtra("forecast", forecast.toString());
             manager.sendBroadcast(intent);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
+        } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         } catch (JSONException e) {
             e.printStackTrace();
