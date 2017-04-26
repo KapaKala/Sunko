@@ -26,6 +26,7 @@ public class LocationService extends Service implements LocationListener {
     LocationManager locationManager;
     Location location;
     boolean isLocationFound = false;
+    boolean usingLocation;
 
     LocalBroadcastManager manager = LocalBroadcastManager.getInstance(this);
     IBinder localBinder = new LocalBinder();
@@ -36,12 +37,28 @@ public class LocationService extends Service implements LocationListener {
         Toast.makeText(getApplicationContext(), "Location Service Started", Toast.LENGTH_LONG).show();
 
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-        doGPS();
+        usingLocation = intent.getBooleanExtra("usingLocation", true);
+
+        Log.d("LOCATIONSERVICE INTENT", "usingLocation: " + usingLocation + ", " +
+                "City: " + intent.getStringExtra("locationCity") + ", " +
+                "Country: " + intent.getStringExtra("locationCountry"));
+        if (usingLocation) {
+            doGPS();
+        } else {
+            getWeatherInfo(intent.getStringExtra("locationCountry"), intent.getStringExtra("locationCity"));
+        }
+
         return START_NOT_STICKY;
     }
 
-    private void getWeatherInfo(double lat, double lon) {
-        String url = "http://api.wunderground.com/api/9c724765b2ea3c24/geolookup/astronomy/conditions/forecast/q/" + lat + "," + lon + ".json";
+    public void getWeatherInfo(Object param1, Object param2) {
+        String url = "";
+        if (usingLocation) {
+            url = "http://api.wunderground.com/api/9c724765b2ea3c24/geolookup/astronomy/conditions/forecast/q/" + param1 + "," + param2 + ".json";
+        } else {
+            Log.d("COUNTRY: " + param1, ", CITY: " + param2);
+            url = "http://api.wunderground.com/api/9c724765b2ea3c24/geolookup/astronomy/conditions/forecast/q/" + param1 + "/" + param2 + ".json";
+        }
         Log.d("REQUEST URL", url);
         WeatherGetter getter = new WeatherGetter();
         try {
@@ -76,6 +93,9 @@ public class LocationService extends Service implements LocationListener {
             e.printStackTrace();
         } catch (JSONException e) {
             e.printStackTrace();
+            Intent intent = new Intent("weatherInfo");
+            intent.putExtra("error", "No weather info was found, sorry!");
+            manager.sendBroadcast(intent);
         }
     }
 

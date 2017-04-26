@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
@@ -27,14 +28,17 @@ import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -47,6 +51,10 @@ import java.net.URL;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     final int PERMISSION_REQUEST_ID = 0;
+
+    String locationCity = "";
+    String locationCountry = "";
+    boolean usingLocation = true;
 
     boolean bound = false;
     LocationService locationService;
@@ -134,11 +142,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     public void getWeather() {
-        startService(intent);
+        if (weatherIcon.getAlpha() == 1) {
+            weatherIcon.setAlpha(0f);
+            progressBar.setAlpha(1f);
+        }
 
         if(!bound) {
-            intent = new Intent(this, LocationService.class);
-            bindService(intent, locationServiceConnection, Context.BIND_NOT_FOREGROUND);
+            Intent intent = new Intent(this, LocationService.class);
+
+            Log.d("PUTTING EXTRAS", usingLocation + ", " + locationCity + ", " + locationCountry);
+
+            intent.putExtra("usingLocation", usingLocation);
+            intent.putExtra("locationCity", locationCity);
+            intent.putExtra("locationCountry", locationCountry);
+            startService(intent);
             Log.d("MainActivity", "Service Bound");
             bound = true;
 
@@ -152,29 +169,34 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     weatherIcon.setAlpha(1f);
                     progressBar.setAlpha(0);
                 }
-                String location = intent.getStringExtra("location");
-                String weatherType = intent.getStringExtra("weatherType");
-                String temperature = intent.getStringExtra("temperature");
-                int currentHour = intent.getIntExtra("currentHour", 0);
-                int sunrise = intent.getIntExtra("sunrise", 6);
-                int sunset = intent.getIntExtra("sunset", 21);
 
-                locationText.setText(location);
+                String error = intent.getStringExtra("error");
+                if (error != null) {
+                    Toast.makeText(MainActivity.this, error, Toast.LENGTH_LONG).show();
+                } else {
+                    String location = intent.getStringExtra("location");
+                    String weatherType = intent.getStringExtra("weatherType");
+                    String temperature = intent.getStringExtra("temperature");
+                    int currentHour = intent.getIntExtra("currentHour", 0);
+                    int sunrise = intent.getIntExtra("sunrise", 6);
+                    int sunset = intent.getIntExtra("sunset", 21);
 
-                weatherIcon.setImageResource(weatherDisplayHandler.setImage(weatherType, currentHour, sunrise, sunset));
-                setWeatherText(weatherType, temperature);
+                    locationText.setText(location);
 
-                if (weatherType.equals("Clear")) {
+                    weatherIcon.setImageResource(weatherDisplayHandler.setImage(weatherType, currentHour, sunrise, sunset));
+                    setWeatherText(weatherType, temperature);
+
                     View v = findViewById(R.id.mainActivityLayout);
                     int h = v.getHeight();
                     ShapeDrawable mDrawable = new ShapeDrawable(new RectShape());
-                    mDrawable.getPaint().setShader(new LinearGradient(0, 0, 0, h, Color.parseColor("#FF4E50"), Color.parseColor("#F9D423"), Shader.TileMode.REPEAT));
+                    mDrawable.getPaint().setShader(weatherDisplayHandler.setBackgroundGradient(h, weatherType, currentHour, sunrise, sunset));
                     weatherBG.setBackground(mDrawable);
-                    weatherBG.setAlpha(0f);
+                    weatherBG.setAlpha(1f);
                     ObjectAnimator bgFade = ObjectAnimator.ofFloat(weatherBG, "alpha", 0, 1);
                     bgFade.setDuration(500);
                     bgFade.setInterpolator(new AccelerateInterpolator());
                     bgFade.start();
+
                 }
 
                 if (bound) {
@@ -182,7 +204,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     stopService(i);
 
                     Log.d("MainActivity", "Service unbound");
-                    unbindService(locationServiceConnection);
+                    Intent stopIntent = new Intent(MainActivity.this, LocationService.class);
+                    stopService(stopIntent);
 
                     bound = false;
                 }
@@ -313,5 +336,53 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             infoText.setText("Might be a bit too cold to sunbathe right now");
         }
 
+    }
+
+    public void pickCityDialog(View v) {
+        LayoutInflater linf = LayoutInflater.from(this);
+        final View inflater = linf.inflate(R.layout.pick_city_dialog, null);
+        AlertDialog.Builder alert = new AlertDialog.Builder(this);
+
+        alert.setMessage("Here you can choose a city to display its weather instead of your location's.");
+        alert.setView(inflater);
+
+        final EditText cityEt = (EditText) inflater.findViewById(R.id.pcDialogCity);
+        final EditText countryEt = (EditText) inflater.findViewById(R.id.pcDialogCountry);
+
+        alert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                String city = cityEt.getText().toString().replace(" ", "_");
+                String country = countryEt.getText().toString().replace(" ", "_");
+
+                usingLocation = false;
+                locationCity = city;
+                locationCountry = country;
+
+                Log.d("PickCityDialog", "City: " + city + ", Country: " + country);
+
+                getWeather();
+            }
+        });
+
+        alert.setNeutralButton("Use current location", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                usingLocation = true;
+                locationCity = "";
+                locationCountry = "";
+
+                getWeather();
+            }
+        });
+
+        alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+            }
+        });
+
+        alert.show();
     }
 }
