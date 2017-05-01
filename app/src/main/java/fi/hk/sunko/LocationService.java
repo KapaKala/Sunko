@@ -51,10 +51,10 @@ public class LocationService extends Service implements LocationListener {
     public void getWeatherInfo(Object param1, Object param2) {
         String url;
         if (usingLocation) {
-            url = "http://api.wunderground.com/api/9c724765b2ea3c24/geolookup/astronomy/conditions/forecast/q/" + param1 + "," + param2 + ".json";
+            url = "http://api.wunderground.com/api/" + getApplication().getResources().getString(R.string.API_KEY_WU) + "/geolookup/astronomy/conditions/forecast/q/" + param1 + "," + param2 + ".json";
         } else {
             Log.d("COUNTRY: " + param1, ", CITY: " + param2);
-            url = "http://api.wunderground.com/api/9c724765b2ea3c24/geolookup/astronomy/conditions/forecast/q/" + param1 + "/" + param2 + ".json";
+            url = "http://api.wunderground.com/api/" + getApplication().getResources().getString(R.string.API_KEY_WU) + "/geolookup/astronomy/conditions/forecast/q/" + param1 + "/" + param2 + ".json";
         }
         Log.d("REQUEST URL", url);
         WeatherGetter getter = new WeatherGetter();
@@ -73,11 +73,8 @@ public class LocationService extends Service implements LocationListener {
             JSONObject sunPhase = info.getJSONObject("sun_phase");
             int sunrise = sunPhase.getJSONObject("sunrise").getInt("hour");
             int sunset = sunPhase.getJSONObject("sunset").getInt("hour");
-            Log.d("SUN PHASE", "" + sunPhase.toString());
 
             JSONArray forecast = info.getJSONObject("forecast").getJSONObject("simpleforecast").getJSONArray("forecastday");
-
-            System.out.println(forecast);
 
             Intent intent = new Intent("weatherInfo");
             intent.putExtra("location", location);
