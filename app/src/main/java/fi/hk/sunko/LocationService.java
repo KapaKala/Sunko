@@ -64,22 +64,22 @@ public class LocationService extends Service implements LocationListener {
 
             Toast.makeText(getApplicationContext(), "Updated", Toast.LENGTH_LONG).show();
 
-            String stringTime = currentObservation.getString("local_time_rfc822");
-            int currentHour = Integer.parseInt(stringTime.substring(17, 19));
+            String location = currentObservation.getJSONObject("display_location").getString("full");
 
-            String location = currentObservation.getJSONObject("display_location").getString("city") + ", " +
-                    currentObservation.getJSONObject("display_location").getString("country");
-
-            JSONObject sunPhase = info.getJSONObject("sun_phase");
-            int sunrise = sunPhase.getJSONObject("sunrise").getInt("hour");
-            int sunset = sunPhase.getJSONObject("sunset").getInt("hour");
+            JSONObject sunPhase = info.getJSONObject("moon_phase");
+            double currentHour = Double.parseDouble(sunPhase.getJSONObject("current_time").getInt("hour") + "."
+                    + sunPhase.getJSONObject("current_time").getInt("minute"));
+            double sunrise = Double.parseDouble(sunPhase.getJSONObject("sunrise").getInt("hour") + "."
+                    + sunPhase.getJSONObject("sunrise").getInt("minute"));
+            double sunset = Double.parseDouble(sunPhase.getJSONObject("sunset").getInt("hour") + "."
+                    + sunPhase.getJSONObject("sunset").getInt("minute"));
 
             JSONArray forecast = info.getJSONObject("forecast").getJSONObject("simpleforecast").getJSONArray("forecastday");
 
             Intent intent = new Intent("weatherInfo");
             intent.putExtra("location", location);
             intent.putExtra("iconuri", currentObservation.getString("icon_url"));
-            intent.putExtra("weatherType", currentObservation.getString("weather"));
+            intent.putExtra("weatherType", "Partly Cloudy");
             intent.putExtra("temperature", currentObservation.getString("temp_c"));
             intent.putExtra("currentHour", currentHour);
             intent.putExtra("sunrise", sunrise);
