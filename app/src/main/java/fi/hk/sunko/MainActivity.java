@@ -1,7 +1,6 @@
 package fi.hk.sunko;
 
 import android.Manifest;
-import android.animation.ObjectAnimator;
 import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -12,11 +11,9 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.RectShape;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
 import android.os.Build;
 import android.os.IBinder;
 import android.provider.Settings;
@@ -33,23 +30,21 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.view.animation.AccelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.wang.avi.AVLoadingIndicatorView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.List;
-
-public class MainActivity extends AppCompatActivity implements SensorEventListener {
+public class MainActivity extends AppCompatActivity{
     final int PERMISSION_REQUEST_ID = 0;
 
     String locationCity = "";
@@ -60,22 +55,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     LocationService locationService;
     LocationServiceConnection locationServiceConnection;
     ImageView weatherIcon;
-    ImageView weatherBG;
+    ImageView weatherBG1;
+    ImageView weatherBG2;
     ImageButton refreshButton;
+    ImageButton editLocationButton;
     TextView locationText;
     TextView weatherText;
     TextView infoText;
-    ProgressBar progressBar;
+    AVLoadingIndicatorView progressBar;
     Intent intent;
 
     JSONArray forecast;
 
+    AnimationUtil ani;
     RecyclerView rv;
     WeatherDisplayHandler weatherDisplayHandler;
-
-//    private SensorManager mSensorManager;
-//    private Sensor mAccelerometer;
-//    private AudioManager mAudioManager;
 
     public MainActivity() {
 
@@ -95,32 +89,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         setContentView(R.layout.activity_main);
 
         forecast = new JSONArray();
-
         locationServiceConnection = new LocationServiceConnection();
-
         weatherDisplayHandler = new WeatherDisplayHandler();
+        ani = new AnimationUtil();
 
-        weatherIcon   = (ImageView)   findViewById(R.id.imageView);
-        weatherBG     = (ImageView)   findViewById(R.id.weatherBG);
-        refreshButton = (ImageButton) findViewById(R.id.refreshButton);
-        locationText  = (TextView)    findViewById(R.id.locationTextView);
-        weatherText   = (TextView)    findViewById(R.id.weatherTextView);
-        infoText      = (TextView)    findViewById(R.id.infoText);
-        progressBar   = (ProgressBar) findViewById(R.id.progressBar);
-
-        rv = (RecyclerView)findViewById(R.id.rv);
+        weatherIcon        = (ImageView)              findViewById(R.id.imageView);
+        weatherBG1         = (ImageView)              findViewById(R.id.primaryBG);
+        weatherBG2         = (ImageView)              findViewById(R.id.secondaryBG);
+        refreshButton      = (ImageButton)            findViewById(R.id.refreshButton);
+        editLocationButton = (ImageButton)            findViewById(R.id.editLocationButton);
+        locationText       = (TextView)               findViewById(R.id.locationTextView);
+        weatherText        = (TextView)               findViewById(R.id.weatherTextView);
+        infoText           = (TextView)               findViewById(R.id.infoText);
+        progressBar        = (AVLoadingIndicatorView) findViewById(R.id.progressBar);
+        rv                 = (RecyclerView)           findViewById(R.id.rv);
         rv.setHasFixedSize(true);
 
-
-        weatherText.setText("Trying to find you...");
+        infoText.setText("Trying to find you...");
 
         weatherIcon.setColorFilter(Color.WHITE);
 
         setStatusBarTranslucent(true);
-
-//        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-//        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-//        mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         NotificationManager mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 
@@ -128,6 +117,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Intent intent = new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
             startActivity(intent);
         }
+
+        Typeface medium = Typeface.createFromAsset(getAssets(), "fonts/GothamRnd-Medium.otf");
+        Typeface book = Typeface.createFromAsset(getAssets(), "fonts/GothamRnd-Book.otf");
+        infoText.setTypeface(medium);
+        weatherText.setTypeface(book);
+        locationText.setTypeface(book);
 
         showPermissionDialog();
 
@@ -154,11 +149,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     public void getWeather() {
         refreshButton.setClickable(false);
+        editLocationButton.setClickable(false);
 
-        if (weatherIcon.getAlpha() == 1) {
-            weatherIcon.setAlpha(0f);
-            progressBar.setAlpha(1f);
-        }
+
+
+            ani.hideAnimation(weatherIcon);
+            ani.showAnimation(progressBar);
+            ani.hideAnimation(weatherText);
+            ani.hideAnimation(infoText);
+            infoText.setText("Searching...");
+            ani.showAnimation(infoText);
+            ani.hideAnimation(rv);
+
 
         if(!bound) {
             Intent intent = new Intent(this, LocationService.class);
@@ -171,38 +173,49 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             startService(intent);
             Log.d("MainActivity", "Service Bound");
             bound = true;
-
         }
-//        mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
 
         LocalBroadcastManager.getInstance(this).registerReceiver(new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 refreshButton.setClickable(true);
-
-                if (weatherIcon.getAlpha() == 0) {
-                    weatherIcon.setAlpha(1f);
-                    progressBar.setAlpha(0);
-                }
+                editLocationButton.setClickable(true);
 
                 String error = intent.getStringExtra("error");
                 if (error != null) {
-                    Toast.makeText(MainActivity.this, error, Toast.LENGTH_LONG).show();
+                    weatherIcon.setImageResource(R.drawable.ic_mood_bad_black_24dp);
+                    ani.showAnimation(infoText);
+                    ani.hideAnimation(progressBar);
+                    ani.showAnimation(weatherIcon);
+                    ani.showAnimation(weatherText);
+                    infoText.setText("No weather info found, try again!");
+                    weatherText.setText("Oops!");
+                    locationText.setText("");
                 } else {
+
+                        ani.showAnimation(weatherIcon);
+                        ani.hideAnimation(progressBar);
+                        ani.showAnimation(weatherText);
+                        ani.showAnimation(infoText);
+                        ani.showAnimation(rv);
+
+
                     String location = intent.getStringExtra("location");
-                    String weatherType = intent.getStringExtra("weatherType");
+                    String weatherType = intent.getStringExtra("weatherType").equals("")
+                            ? "Clear"
+                            : intent.getStringExtra("weatherType");
+
                     String temperature = intent.getStringExtra("temperature");
-                    int currentHour = intent.getIntExtra("currentHour", 0);
-                    int sunrise = intent.getIntExtra("sunrise", 6);
-                    int sunset = intent.getIntExtra("sunset", 21);
+                    int roundedTemp = (int) Math.floor(Double.parseDouble(temperature));
+                    double currentHour = intent.getDoubleExtra("currentHour", 0);
+                    double sunrise = intent.getDoubleExtra("sunrise", 6);
+                    double sunset = intent.getDoubleExtra("sunset", 21);
 
                     String jsonArray = intent.getStringExtra("forecast");
-
 
                     try {
                         JSONArray array = new JSONArray(jsonArray);
                         forecast = array;
-                        System.out.println(array.getString(1));
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
@@ -215,19 +228,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     locationText.setText(location);
 
                     weatherIcon.setImageResource(weatherDisplayHandler.setImage(weatherType, currentHour, sunrise, sunset));
-                    setWeatherText(weatherType, temperature);
+                    infoText.setText(weatherDisplayHandler.setInfoText(weatherType, roundedTemp, currentHour, sunrise, sunset));
+                    weatherText.setText(roundedTemp + "°" + "\n" +
+                            weatherType);
 
                     View v = findViewById(R.id.mainActivityLayout);
                     int h = v.getHeight();
                     ShapeDrawable mDrawable = new ShapeDrawable(new RectShape());
                     mDrawable.getPaint().setShader(weatherDisplayHandler.setBackgroundGradient(h, weatherType, currentHour, sunrise, sunset));
-                    weatherBG.setBackground(mDrawable);
-                    weatherBG.setAlpha(1f);
-                    ObjectAnimator bgFade = ObjectAnimator.ofFloat(weatherBG, "alpha", 0, 1);
-                    bgFade.setDuration(500);
-                    bgFade.setInterpolator(new AccelerateInterpolator());
-                    bgFade.start();
-
+                    if (weatherBG1.getAlpha() == 0f) {
+                        weatherBG1.setBackground(mDrawable);
+                        changeBackground(weatherBG1, weatherBG2);
+                    } else {
+                        weatherBG2.setBackground(mDrawable);
+                        changeBackground(weatherBG2, weatherBG1);
+                    }
                 }
 
                 if (bound) {
@@ -269,28 +284,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-//        float values[] = event.values;
-//
-//        if (values[2] < -9.75f && values[2] > -9.85f) {
-//            Log.d("SENSOR", String.valueOf(values[2]));
-//            mAudioManager.setStreamVolume(AudioManager.STREAM_RING, 0, AudioManager.FLAG_ALLOW_RINGER_MODES);
-//        } else {
-//            mAudioManager.setStreamVolume(AudioManager.STREAM_RING, mAudioManager.getStreamMaxVolume(AudioManager.STREAM_RING), AudioManager.FLAG_ALLOW_RINGER_MODES);
-//
-//        }
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
-    }
-
     public void refresh(View v) {
         Animation rotation = AnimationUtils.loadAnimation(this, R.anim.refresh_rotate);
         v.startAnimation(rotation);
         getWeather();
+    }
+
+    private void changeBackground(View v1, View v2) {
+        ani.showAnimation(v1);
+        ani.hideAnimation(v2);
+//        ObjectAnimator bgIn = ObjectAnimator.ofFloat(v1, "alpha", 0, 1);
+//        bgIn.setDuration(1000);
+//        ObjectAnimator bgOut = ObjectAnimator.ofFloat(v2, "alpha", 1, 0);
+//        bgOut.setDuration(1000);
+//
+//        AnimatorSet set = new AnimatorSet();
+//        set.play(bgOut).after(bgIn);
+//        set.start();
     }
 
 
@@ -309,25 +319,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
-    private void setWeatherText(String type, String temperature) {
-        int roundedTemp = (int) Math.floor(Double.parseDouble(temperature));
-        weatherText.setText("The weather is currently " + type.toLowerCase() + "\n" +
-                "It is " + roundedTemp + " degrees outside" );
-
-        if (roundedTemp > 15) {
-            infoText.setText("It's warm enough alright");
-        } else {
-            infoText.setText("Might be a bit too cold to sunbathe right now");
-        }
-
-    }
-
     public void pickCityDialog(View v) {
         LayoutInflater linf = LayoutInflater.from(this);
         final View inflater = linf.inflate(R.layout.pick_city_dialog, null);
         AlertDialog.Builder alert = new AlertDialog.Builder(this);
 
-        alert.setMessage("Here you can choose a city to display its weather instead of your location's.");
+        alert.setMessage("Get the weather from the location of your choosing or use your current location");
         alert.setView(inflater);
 
         final EditText cityEt = (EditText) inflater.findViewById(R.id.pcDialogCity);
@@ -339,13 +336,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 String city = cityEt.getText().toString().replace(" ", "_");
                 String country = countryEt.getText().toString().replace(" ", "_");
 
-                usingLocation = false;
-                locationCity = city;
-                locationCountry = country;
+                if (!city.equals("") && !country.equals("")) {
+                    usingLocation = false;
+                    locationCity = city;
+                    locationCountry = country;
 
-                Log.d("PickCityDialog", "City: " + city + ", Country: " + country);
-
-                getWeather();
+                    Log.d("PickCityDialog", "City: " + city + ", Country: " + country);
+                    getWeather();
+                }
             }
         });
 
@@ -375,7 +373,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         JSONArray forecast;
 
         RVAdapter(JSONArray forecast) {
-            System.out.println("WE ARE CREATING THE RVADAPTER HERE");
             this.forecast = forecast;
         }
 
@@ -389,9 +386,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         public void onBindViewHolder(ForecastHolder holder, int position) {
             try {
                 JSONObject dayforecast = (JSONObject) forecast.get(position);
-                holder.tv.setText(dayforecast.getJSONObject("high").getString("celsius") + "|" +
-                                  dayforecast.getJSONObject("low").getString("celsius"));
+                holder.tv.setText(dayforecast.getJSONObject("high").getString("celsius") + "° | " +
+                                  dayforecast.getJSONObject("low").getString("celsius") + "°");
                 holder.iv.setImageResource(weatherDisplayHandler.setImage(dayforecast.getString("conditions"), 12, 6, 21));
+                holder.dv.setText(dayforecast.getJSONObject("date").getString("weekday_short"));
 
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -407,13 +405,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         public class ForecastHolder extends RecyclerView.ViewHolder {
             TextView tv;
+            TextView dv;
             ImageView iv;
 
             ForecastHolder(View itemView) {
                 super(itemView);
                 tv = (TextView) itemView.findViewById(R.id.rvtv);
+                dv = (TextView) itemView.findViewById(R.id.rvdv);
                 iv = (ImageView) itemView.findViewById(R.id.rviv);
+
+                Typeface book = Typeface.createFromAsset(getAssets(), "fonts/GothamRnd-Book.otf");
+                tv.setTypeface(book);
             }
+
         }
 
     }
