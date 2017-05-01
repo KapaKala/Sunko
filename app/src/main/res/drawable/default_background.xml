@@ -6,12 +6,12 @@
         <shape>
             <gradient
                 android:angle="90"
-                android:startColor="#dedede"
-                android:endColor="#ededed"/>
+                android:startColor="#aaaaaa"
+                android:endColor="#cccccc"/>
             <gradient
-                android:angle="90"
-                android:startColor="#dedede"
-                android:endColor="#ededed"/>
+                android:angle="225"
+                android:startColor="#4568DC"
+                android:endColor="#B06AB3"/>
         </shape>
     </item>
 
