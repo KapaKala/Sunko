@@ -17,7 +17,7 @@
         android:layout_marginLeft="4dp"
         android:layout_marginRight="4dp"
         android:layout_marginBottom="4dp"
-        android:hint="City" />
+        android:hint="City/Area" />
 
     <EditText
         android:id="@+id/pcDialogCountry"
@@ -28,5 +28,5 @@
         android:layout_marginLeft="4dp"
         android:layout_marginRight="4dp"
         android:layout_marginBottom="4dp"
-        android:hint="Country" />
+        android:hint="Country/State" />
 </LinearLayout>

@@ -7,11 +7,20 @@
     android:layout_height="wrap_content"
     android:paddingEnd="10dp">
 
+    <TextView
+        android:id="@+id/rvdv"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAlignment="center"
+        android:layout_marginBottom="5dp"
+        android:text="NO TEXT LOL" />
+
     <ImageView
         android:id="@+id/rviv"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:srcCompat="@drawable/ic_sun" />
+        app:srcCompat="@drawable/ic_sun"
+        android:layout_marginBottom="5dp"/>
 
     <TextView
         android:id="@+id/rvtv"
