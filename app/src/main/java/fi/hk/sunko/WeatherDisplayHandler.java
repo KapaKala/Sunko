@@ -124,9 +124,10 @@ class WeatherDisplayHandler {
                 case "Clear":
                     return mDrawable.getPaint().setShader(new LinearGradient(0, 0, 0, h, Color.parseColor("#0b52c4"), Color.parseColor("#6dc8f6"), Shader.TileMode.REPEAT));
                 case "Mostly Cloudy":
+                    return mDrawable.getPaint().setShader(new LinearGradient(0, 0, 0, h, Color.parseColor("#6a7b85"), Color.parseColor("#78a3d8"), Shader.TileMode.REPEAT));
                 case "Overcast":
                 case "Cloudy":
-                    return mDrawable.getPaint().setShader(new LinearGradient(0, 0, 0, h, Color.parseColor("#939393"), Color.parseColor("#b2b2b2"), Shader.TileMode.REPEAT));
+                    return mDrawable.getPaint().setShader(new LinearGradient(0, 0, 0, h, Color.parseColor("#787878"), Color.parseColor("#b2b2b2"), Shader.TileMode.REPEAT));
                 case "Light Rain":
                 case "Light Rain Showers":
                 case "Drizzle":
