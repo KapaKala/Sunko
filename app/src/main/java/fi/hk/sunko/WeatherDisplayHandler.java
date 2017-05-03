@@ -6,10 +6,31 @@ import android.graphics.Shader;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.RectShape;
 
+/**
+ * Utility class for getting different display elements based on current weather data.
+ *
+ * @author Henri Kankaanpää
+ * @version 1.0
+ * @since 1.0
+ */
 class WeatherDisplayHandler {
+
+    /**
+     * Used to display SVG images converted to XML drawables based on weather information.
+     *
+     * @param weatherType Name of the current type of weather
+     * @param currentHour Current time
+     * @param sunrise Sunrise time for the current location
+     * @param sunset Sunset time for the current location
+     * @return The ID of the drawable to be displayed
+     */
     int setImage(String weatherType, double currentHour, double sunrise, double sunset) {
 
-        if (currentHour < sunset && currentHour > sunrise) {
+        if (((currentHour < sunrise + 1 && currentHour > sunrise - 1)
+                || (currentHour < sunset + 1 && currentHour > sunset - 1))
+                && weatherType.equals("Clear")) {
+            return R.drawable.ic_sun_low;
+        } else if (currentHour < sunset && currentHour > sunrise) {
             switch (weatherType) {
                 case "Clear":
                     return R.drawable.ic_sun;
@@ -22,6 +43,7 @@ class WeatherDisplayHandler {
                     return R.drawable.ic_cloud_drizzle;
                 case "Rain":
                     return R.drawable.ic_cloud_rain;
+                case "Light Rain":
                 case "Light Rain Showers":
                     return R.drawable.ic_cloud_rain_2;
                 case "Chance of Rain":
@@ -77,10 +99,18 @@ class WeatherDisplayHandler {
                     return R.drawable.ic_mood_bad_black_24dp;
             }
         }
-
-
     }
 
+    /**
+     * Used to get a background shader gradient based on the current weather information.
+     *
+     * @param h The height of the screen
+     * @param weatherType Name of the current type of weather
+     * @param currentHour Current time
+     * @param sunrise Sunrise time for the current location
+     * @param sunset Sunset time for the current location
+     * @return Shader that reflects the current weather
+     */
     Shader setBackgroundGradient(int h, String weatherType, double currentHour, double sunrise, double sunset) {
         ShapeDrawable mDrawable = new ShapeDrawable(new RectShape());
         mDrawable.getPaint().setShader(new LinearGradient(0, 0, 0, h, Color.parseColor("#FF4E50"), Color.parseColor("#F9D423"), Shader.TileMode.REPEAT));
@@ -96,7 +126,8 @@ class WeatherDisplayHandler {
                 case "Mostly Cloudy":
                 case "Overcast":
                 case "Cloudy":
-                    return mDrawable.getPaint().setShader(new LinearGradient(0, 0, 0, h, Color.parseColor("#1a222f"), Color.parseColor("#3e5c80"), Shader.TileMode.REPEAT));
+                    return mDrawable.getPaint().setShader(new LinearGradient(0, 0, 0, h, Color.parseColor("#939393"), Color.parseColor("#b2b2b2"), Shader.TileMode.REPEAT));
+                case "Light Rain":
                 case "Light Rain Showers":
                 case "Drizzle":
                 case "Rain":
@@ -134,9 +165,22 @@ class WeatherDisplayHandler {
         }
     }
 
+    /**
+     * Used to display a string of text based on current weather information.
+     *
+     * @param weatherType Name of the current type of weather
+     * @param currentHour Current time
+     * @param sunrise Sunrise time for the current location
+     * @param sunset Sunset time for the current location
+     * @return String that describes current weather
+     */
     String setInfoText(String weatherType, int temperature, double currentHour, double sunrise, double sunset) {
         if (temperature > 16) {
-            if (currentHour < sunset && currentHour > sunrise) {
+            if (currentHour < sunrise + 1 && currentHour > sunrise - 1 && weatherType.equals("Clear")) {
+                return "Weather seems nice, the sun is just rising";
+            } else if (currentHour < sunset + 1 && currentHour > sunset - 1 && weatherType.equals("Clear")) {
+                return "The weather is nice, the sun is going down";
+            } else if (currentHour < sunset && currentHour > sunrise) {
                 switch (weatherType) {
                     case "Clear":
                         return "Weather seems nice, go outside, get some sun!";
@@ -155,14 +199,12 @@ class WeatherDisplayHandler {
                         return "Oops!";
                 }
             } else {
-                return "Can't really sunbathe at night";
+                return "Ain't no sun at night";
             }
         } else if (temperature > 8){
-            return "It's kinda chilly, you might need a jacket";
+            return "It's not very warm, you might need a jacket";
         } else {
             return "It's cold, grab a jacket";
         }
-
-
     }
 }

@@ -1,28 +1,22 @@
 package fi.hk.sunko;
 
 import android.Manifest;
-import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.RectShape;
-import android.os.Build;
-import android.os.IBinder;
-import android.provider.Settings;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -44,6 +38,13 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+/**
+ * The main view of the application.
+ *
+ * @author Henri Kankaanpää
+ * @version 1.0
+ * @since 1.0
+ */
 public class MainActivity extends AppCompatActivity{
     final int PERMISSION_REQUEST_ID = 0;
 
@@ -52,14 +53,13 @@ public class MainActivity extends AppCompatActivity{
     boolean usingLocation = true;
 
     boolean bound = false;
-    LocationService locationService;
-    LocationServiceConnection locationServiceConnection;
     ImageView weatherIcon;
     ImageView weatherBG1;
     ImageView weatherBG2;
     ImageButton refreshButton;
     ImageButton editLocationButton;
     TextView locationText;
+    TextView temperatureText;
     TextView weatherText;
     TextView infoText;
     AVLoadingIndicatorView progressBar;
@@ -71,10 +71,11 @@ public class MainActivity extends AppCompatActivity{
     RecyclerView rv;
     WeatherDisplayHandler weatherDisplayHandler;
 
-    public MainActivity() {
-
-    }
-
+    /**
+     * Toggles the transparency of the status bar.
+     *
+     * @param makeTranslucent Boolean value to determine transparency
+     */
     protected void setStatusBarTranslucent(boolean makeTranslucent) {
         if (makeTranslucent) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
@@ -83,13 +84,17 @@ public class MainActivity extends AppCompatActivity{
         }
     }
 
+    /**
+     * Override method for onCreate, called when activity is created.
+     *
+     * @param savedInstanceState Application's saved instance state
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         forecast = new JSONArray();
-        locationServiceConnection = new LocationServiceConnection();
         weatherDisplayHandler = new WeatherDisplayHandler();
         ani = new AnimationUtil();
 
@@ -99,6 +104,7 @@ public class MainActivity extends AppCompatActivity{
         refreshButton      = (ImageButton)            findViewById(R.id.refreshButton);
         editLocationButton = (ImageButton)            findViewById(R.id.editLocationButton);
         locationText       = (TextView)               findViewById(R.id.locationTextView);
+        temperatureText    = (TextView)               findViewById(R.id.temperatureView);
         weatherText        = (TextView)               findViewById(R.id.weatherTextView);
         infoText           = (TextView)               findViewById(R.id.infoText);
         progressBar        = (AVLoadingIndicatorView) findViewById(R.id.progressBar);
@@ -111,32 +117,31 @@ public class MainActivity extends AppCompatActivity{
 
         setStatusBarTranslucent(true);
 
-        NotificationManager mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !mNotificationManager.isNotificationPolicyAccessGranted()) {
-            Intent intent = new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
-            startActivity(intent);
-        }
-
-        Typeface medium = Typeface.createFromAsset(getAssets(), "fonts/GothamRnd-Medium.otf");
-        Typeface book = Typeface.createFromAsset(getAssets(), "fonts/GothamRnd-Book.otf");
+        Typeface medium = Typeface.createFromAsset(getAssets(), "fonts/Nunito-Bold.ttf");
+        Typeface book = Typeface.createFromAsset(getAssets(), "fonts/Nunito-SemiBold.ttf");
         infoText.setTypeface(medium);
+        temperatureText.setTypeface(medium);
         weatherText.setTypeface(book);
         locationText.setTypeface(book);
 
         showPermissionDialog();
 
         intent = new Intent(this, LocationService.class);
-        startService(intent);
     }
 
+
+    /**
+     * Override method for onStart lifecycle method.
+     */
     @Override
     protected void onStart() {
         super.onStart();
-
-
     }
 
+
+    /**
+     * Displays a dialog for confirming permission to use location services.
+     */
     private void showPermissionDialog() {
         if (!LocationService.checkPermission(this)) {
             ActivityCompat.requestPermissions(
@@ -147,20 +152,32 @@ public class MainActivity extends AppCompatActivity{
         }
     }
 
+    /**
+     * Method for getting weather info into the main activity.
+     *
+     * Starts the LocationService service, which manages fetching the user's location, then gets
+     * the weather information from the Weather Underground API, and returns it here. Upon receiving
+     * the data, it is then displayed in the view.
+     */
     public void getWeather() {
         refreshButton.setClickable(false);
         editLocationButton.setClickable(false);
 
-
-
-            ani.hideAnimation(weatherIcon);
-            ani.showAnimation(progressBar);
-            ani.hideAnimation(weatherText);
-            ani.hideAnimation(infoText);
-            infoText.setText("Searching...");
-            ani.showAnimation(infoText);
-            ani.hideAnimation(rv);
-
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (weatherIcon.getAlpha() != 0) {
+                    ani.hideAnimation(weatherIcon);
+                    ani.hideAnimation(temperatureText);
+                    ani.showAnimation(progressBar);
+                    ani.hideAnimation(weatherText);
+                    ani.hideAnimation(infoText);
+                    infoText.setText("Searching...");
+                    ani.showAnimation(infoText);
+                    ani.hideAnimation(rv);
+                }
+            }
+        });
 
         if(!bound) {
             Intent intent = new Intent(this, LocationService.class);
@@ -178,72 +195,74 @@ public class MainActivity extends AppCompatActivity{
         LocalBroadcastManager.getInstance(this).registerReceiver(new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                refreshButton.setClickable(true);
-                editLocationButton.setClickable(true);
+                final Intent finalIntent = intent;
 
-                String error = intent.getStringExtra("error");
-                if (error != null) {
-                    weatherIcon.setImageResource(R.drawable.ic_mood_bad_black_24dp);
-                    ani.showAnimation(infoText);
-                    ani.hideAnimation(progressBar);
-                    ani.showAnimation(weatherIcon);
-                    ani.showAnimation(weatherText);
-                    infoText.setText("No weather info found, try again!");
-                    weatherText.setText("Oops!");
-                    locationText.setText("");
-                } else {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        refreshButton.setClickable(true);
+                        editLocationButton.setClickable(true);
 
-                        ani.showAnimation(weatherIcon);
-                        ani.hideAnimation(progressBar);
-                        ani.showAnimation(weatherText);
-                        ani.showAnimation(infoText);
-                        ani.showAnimation(rv);
+                        String error = finalIntent.getStringExtra("error");
 
+                        if (error != null) {
+                            ani.showAnimation(infoText);
+                            ani.hideAnimation(progressBar);
+                            ani.showAnimation(weatherText);
+                            infoText.setText("No weather info found, try again!");
+                            weatherText.setText(":(");
+                            locationText.setText("");
+                        } else {
+                            ani.showAnimation(weatherIcon);
+                            ani.showAnimation(temperatureText);
+                            ani.hideAnimation(progressBar);
+                            ani.showAnimation(weatherText);
+                            ani.showAnimation(infoText);
+                            ani.showAnimation(rv);
 
-                    String location = intent.getStringExtra("location");
-                    String weatherType = intent.getStringExtra("weatherType").equals("")
-                            ? "Clear"
-                            : intent.getStringExtra("weatherType");
+                            String location = finalIntent.getStringExtra("location");
+                            String weatherType = finalIntent.getStringExtra("weatherType").equals("")
+                                    ? "Clear"
+                                    : finalIntent.getStringExtra("weatherType");
+                            String temperature = finalIntent.getStringExtra("temperature").equals("")
+                                    ? "0"
+                                    : finalIntent.getStringExtra("temperature");
+                            int roundedTemp = (int) Math.floor(Double.parseDouble(temperature));
+                            double currentHour = finalIntent.getDoubleExtra("currentHour", 0);
+                            double sunrise = finalIntent.getDoubleExtra("sunrise", 6);
+                            double sunset = finalIntent.getDoubleExtra("sunset", 21);
 
-                    String temperature = intent.getStringExtra("temperature");
-                    int roundedTemp = (int) Math.floor(Double.parseDouble(temperature));
-                    double currentHour = intent.getDoubleExtra("currentHour", 0);
-                    double sunrise = intent.getDoubleExtra("sunrise", 6);
-                    double sunset = intent.getDoubleExtra("sunset", 21);
+                            String jsonArray = finalIntent.getStringExtra("forecast");
 
-                    String jsonArray = intent.getStringExtra("forecast");
+                            try {
+                                JSONArray array = new JSONArray(jsonArray);
+                                forecast = array;
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
 
-                    try {
-                        JSONArray array = new JSONArray(jsonArray);
-                        forecast = array;
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+                            RVAdapter adapter = new RVAdapter(forecast);
+                            rv.setAdapter(adapter);
+                            LinearLayoutManager llm = new LinearLayoutManager(getApplicationContext(), LinearLayoutManager.HORIZONTAL, false);
+                            rv.setLayoutManager(llm);
+
+                            locationText.setText(location);
+
+                            weatherIcon.setImageResource(weatherDisplayHandler.setImage(weatherType, currentHour, sunrise, sunset));
+                            infoText.setText(weatherDisplayHandler.setInfoText(weatherType, roundedTemp, currentHour, sunrise, sunset));
+                            weatherText.setText(weatherType);
+                            temperatureText.setText(roundedTemp + "°");
+
+                            View v = findViewById(R.id.mainActivityLayout);
+                            int h = v.getHeight();
+                            ShapeDrawable mDrawable = new ShapeDrawable(new RectShape());
+                            mDrawable.getPaint().setShader(weatherDisplayHandler.setBackgroundGradient(h, weatherType, currentHour, sunrise, sunset));
+
+                            ani.animateBackground(weatherBG1, weatherBG2, mDrawable);
+                        }
                     }
+                });
 
-                    RVAdapter adapter = new RVAdapter(forecast);
-                    rv.setAdapter(adapter);
-                    LinearLayoutManager llm = new LinearLayoutManager(getApplicationContext(), LinearLayoutManager.HORIZONTAL, false);
-                    rv.setLayoutManager(llm);
-
-                    locationText.setText(location);
-
-                    weatherIcon.setImageResource(weatherDisplayHandler.setImage(weatherType, currentHour, sunrise, sunset));
-                    infoText.setText(weatherDisplayHandler.setInfoText(weatherType, roundedTemp, currentHour, sunrise, sunset));
-                    weatherText.setText(roundedTemp + "°" + "\n" +
-                            weatherType);
-
-                    View v = findViewById(R.id.mainActivityLayout);
-                    int h = v.getHeight();
-                    ShapeDrawable mDrawable = new ShapeDrawable(new RectShape());
-                    mDrawable.getPaint().setShader(weatherDisplayHandler.setBackgroundGradient(h, weatherType, currentHour, sunrise, sunset));
-                    if (weatherBG1.getAlpha() == 0f) {
-                        weatherBG1.setBackground(mDrawable);
-                        changeBackground(weatherBG1, weatherBG2);
-                    } else {
-                        weatherBG2.setBackground(mDrawable);
-                        changeBackground(weatherBG2, weatherBG1);
-                    }
-                }
 
                 if (bound) {
                     Intent i = new Intent(MainActivity.this, LocationService.class);
@@ -259,14 +278,26 @@ public class MainActivity extends AppCompatActivity{
         }, new IntentFilter("weatherInfo"));
     }
 
+    /**
+     * Override method for the onResume lifecycle method.
+     */
     @Override
     protected void onResume() {
         super.onResume();
 
-        getWeather();
+        if (!bound) {
+            getWeather();
+        }
     }
 
 
+    /**
+     * Handles permissions upon receiving them.
+     *
+     * @param requestCode The request code used in getting specific permissions
+     * @param permissions An array of permissions
+     * @param grantResults An array of the results of a permission query
+     */
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == PERMISSION_REQUEST_ID) {
@@ -284,41 +315,22 @@ public class MainActivity extends AppCompatActivity{
         }
     }
 
+    /**
+     * Method used by the refresh ImageButton for refreshing the current weather information.
+     *
+     * @param v The view that calls this method
+     */
     public void refresh(View v) {
         Animation rotation = AnimationUtils.loadAnimation(this, R.anim.refresh_rotate);
         v.startAnimation(rotation);
         getWeather();
     }
 
-    private void changeBackground(View v1, View v2) {
-        ani.showAnimation(v1);
-        ani.hideAnimation(v2);
-//        ObjectAnimator bgIn = ObjectAnimator.ofFloat(v1, "alpha", 0, 1);
-//        bgIn.setDuration(1000);
-//        ObjectAnimator bgOut = ObjectAnimator.ofFloat(v2, "alpha", 1, 0);
-//        bgOut.setDuration(1000);
-//
-//        AnimatorSet set = new AnimatorSet();
-//        set.play(bgOut).after(bgIn);
-//        set.start();
-    }
-
-
-    private class LocationServiceConnection implements ServiceConnection {
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder localBinder) {
-            LocationService.LocalBinder binder = (LocationService.LocalBinder) localBinder;
-            locationService = binder.getService();
-            locationService.doGPS();
-            Log.d("MainActivity", "MainActivity has connected the service");
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            Log.d("MainActivity", "MainActivity has disconnected the service");
-        }
-    }
-
+    /**
+     * Dialog for selecting a city/area or your current location.
+     *
+     * @param v The view that calls this method
+     */
     public void pickCityDialog(View v) {
         LayoutInflater linf = LayoutInflater.from(this);
         final View inflater = linf.inflate(R.layout.pick_city_dialog, null);
@@ -369,56 +381,94 @@ public class MainActivity extends AppCompatActivity{
 
     }
 
-    public class RVAdapter extends RecyclerView.Adapter<RVAdapter.ForecastHolder>{
+    /**
+     * Recycler view inner class that handles it's app logic.
+     */
+    class RVAdapter extends RecyclerView.Adapter<RVAdapter.ForecastHolder>{
         JSONArray forecast;
 
+        /**
+         * Constructor for the adapter
+         *
+         * @param forecast Forecast data to be displayed
+         */
         RVAdapter(JSONArray forecast) {
             this.forecast = forecast;
         }
 
+        /**
+         * Override method for creating RV's view holders.
+         *
+         * @param parent Parent view group, in this case the main activity
+         * @param viewType The type of view
+         * @return The inflated holder view
+         */
         @Override
         public ForecastHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.rv, parent, false);
             return new ForecastHolder(v);
         }
 
+        /**
+         * Override method for binding the view holders.
+         *
+         * @param holder The holder to be bound
+         * @param position A self-increasing integer for iterating through the holders
+         */
         @Override
         public void onBindViewHolder(ForecastHolder holder, int position) {
             try {
                 JSONObject dayforecast = (JSONObject) forecast.get(position);
-                holder.tv.setText(dayforecast.getJSONObject("high").getString("celsius") + "° | " +
-                                  dayforecast.getJSONObject("low").getString("celsius") + "°");
+                String highTemp = dayforecast.getJSONObject("high").getString("celsius").equals("") ? "-" :
+                        dayforecast.getJSONObject("high").getString("celsius") + "°";
+                String lowTemp = dayforecast.getJSONObject("low").getString("celsius").equals("") ? "-" :
+                        dayforecast.getJSONObject("low").getString("celsius") + "°";
+                holder.tv.setText(highTemp + " | " + lowTemp);
                 holder.iv.setImageResource(weatherDisplayHandler.setImage(dayforecast.getString("conditions"), 12, 6, 21));
                 holder.dv.setText(dayforecast.getJSONObject("date").getString("weekday_short"));
 
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-            holder.tv.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+            Typeface book = Typeface.createFromAsset(getAssets(), "fonts/Nunito-SemiBold.ttf");
+            holder.tv.setTypeface(book);
+            holder.dv.setTypeface(book);
+            holder.tv.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
             holder.tv.setTextSize(16);
+            holder.dv.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+            holder.dv.setTextSize(16);
         }
 
+        /**
+         * Getter for amount of items in the recycler view.
+         *
+         * @return Amount of items in the view
+         */
         @Override
         public int getItemCount() {
             return forecast.length();
         }
 
-        public class ForecastHolder extends RecyclerView.ViewHolder {
+        /**
+         * Adapter's inner view holder class.
+         */
+        class ForecastHolder extends RecyclerView.ViewHolder {
             TextView tv;
             TextView dv;
             ImageView iv;
 
+            /**
+             * Constructor for the view holder.
+             *
+             * @param itemView The view that is inflated into the holders
+             */
             ForecastHolder(View itemView) {
                 super(itemView);
                 tv = (TextView) itemView.findViewById(R.id.rvtv);
                 dv = (TextView) itemView.findViewById(R.id.rvdv);
                 iv = (ImageView) itemView.findViewById(R.id.rviv);
 
-                Typeface book = Typeface.createFromAsset(getAssets(), "fonts/GothamRnd-Book.otf");
-                tv.setTypeface(book);
             }
-
         }
-
     }
 }

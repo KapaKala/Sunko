@@ -24,6 +24,14 @@
         android:layout_alignParentStart="true"
         android:background="@drawable/default_background"/>
 
+    <View
+        android:id="@+id/strut"
+        android:layout_width="0dp"
+        android:layout_height="76dp"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="225dp"/>
+
     <ImageView
         android:id="@+id/imageView"
         android:alpha="0"
@@ -31,32 +39,39 @@
         android:layout_height="76dp"
         app:srcCompat="?android:attr/alertDialogIcon"
         android:contentDescription="Weather icon"
-        android:layout_marginTop="139dp"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentBottom="true"
-        android:layout_marginEnd="20dp"
-        android:layout_marginBottom="225dp"
-        android:layout_marginStart="94dp"/>
+        android:layout_alignEnd="@id/strut"
+        android:layout_alignTop="@id/strut"
+        android:layout_marginEnd="10dp"
+        android:layout_marginTop="20dp"/>
+
+    <TextView
+        android:id="@+id/temperatureView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignStart="@id/strut"
+        android:layout_alignTop="@id/strut"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="5dp"
+        android:textAlignment="textStart"
+        android:textColor="@android:color/background_light"
+        android:textSize="76sp" />
 
     <TextView
         android:id="@+id/weatherTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:lineSpacingExtra="5dp"
-        android:textAlignment="viewStart"
+        android:textAlignment="center"
         android:textColor="@android:color/background_light"
-        android:textSize="24sp"
-        android:layout_toEndOf="@id/imageView"
-        android:layout_alignTop="@+id/imageView"
-        android:layout_alignEnd="@+id/refreshButton"
-        android:layout_marginEnd="18dp" />
+        android:layout_below="@+id/temperatureView"
+        android:layout_centerHorizontal="true"
+        android:textSize="24sp"/>
 
     <com.wang.avi.AVLoadingIndicatorView
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:indicatorName="BallPulseIndicator"
-        android:layout_alignTop="@+id/imageView"
+        android:layout_alignTop="@+id/strut"
         android:layout_centerHorizontal="true"
         />
 
@@ -64,11 +79,9 @@
         android:id="@+id/infoText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Info text "
         android:textAlignment="center"
         android:textColor="@android:color/background_light"
-        android:textSize="30sp"
-        android:lineSpacingExtra="5dp"
+        android:textSize="34sp"
         android:layout_below="@+id/refreshButton"
         android:layout_centerHorizontal="true"
         android:layout_marginStart="20dp"
@@ -78,26 +91,29 @@
     <ImageButton
         android:id="@+id/refreshButton"
         style="@android:style/Widget.Holo.Light.ImageButton"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
         android:layout_alignParentEnd="true"
         android:layout_marginBottom="24dp"
-        android:layout_marginEnd="10dp"
-        android:layout_marginTop="28dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginTop="40dp"
         android:background="@android:color/transparent"
         android:elevation="2dp"
         android:onClick="refresh"
+        android:scaleType="fitXY"
         android:tint="#feffffff"
         app:srcCompat="@drawable/ic_refresh_black_24dp" />
 
     <ImageButton
         android:id="@+id/editLocationButton"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
         android:layout_alignTop="@+id/refreshButton"
-        android:layout_marginStart="10dp"
+        android:layout_marginStart="20dp"
         android:background="@android:color/transparent"
+        android:cropToPadding="false"
         android:onClick="pickCityDialog"
+        android:scaleType="fitXY"
         android:tint="#feffffff"
         app:srcCompat="@drawable/ic_search_black_24dp" />
 
@@ -105,12 +121,12 @@
         android:id="@+id/locationTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="-6dp"
-        android:layout_marginTop="15dp"
         android:layout_toEndOf="@+id/editLocationButton"
         android:layout_alignBottom="@+id/editLocationButton"
         android:layout_alignTop="@+id/editLocationButton"
-        android:textColor="@android:color/background_light" />
+        android:layout_marginTop="5dp"
+        android:textColor="@android:color/background_light"
+        android:textSize="16sp"/>
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/rv"
