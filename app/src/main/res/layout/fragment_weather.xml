@@ -30,7 +30,7 @@
         android:layout_height="76dp"
         android:layout_centerHorizontal="true"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="260dp"/>
+        android:layout_marginBottom="220dp"/>
 
     <ImageView
         android:id="@+id/imageView"
@@ -126,7 +126,7 @@
         android:textSize="16sp"/>
 
     <android.support.v7.widget.RecyclerView
-        android:id="@+id/rv"
+        android:id="@+id/hrv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         tools:listitem="@android:layout/simple_gallery_item"

@@ -39,8 +39,9 @@ public class LocationService extends Service implements LocationListener {
     boolean canGetLocation = false;
     boolean isLocationFound = false;
     boolean usingLocation;
+//    LocalBroadcastManager manager = LocalBroadcastManager.getInstance(getApplicationContext());
 
-    LocalBroadcastManager manager = LocalBroadcastManager.getInstance(getBaseContext());
+
 
     /**
      * Override method for the onStartCommand lifecycle method, ran when service is started.
@@ -52,6 +53,7 @@ public class LocationService extends Service implements LocationListener {
      */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+
         Toast.makeText(getApplicationContext(), "Location Service Started", Toast.LENGTH_LONG).show();
 
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
@@ -79,10 +81,10 @@ public class LocationService extends Service implements LocationListener {
     public void getWeatherInfo(Object param1, Object param2) {
         final String url;
         if (usingLocation) {
-            url = "http://api.wunderground.com/api/" + getApplication().getResources().getString(R.string.API_KEY_WU) + "/astronomy/conditions/forecast/q/" + param1 + "," + param2 + ".json";
+            url = "http://api.wunderground.com/api/" + getApplication().getResources().getString(R.string.API_KEY_WU) + "/astronomy/conditions/forecast10day/hourly/q/" + param1 + "," + param2 + ".json";
         } else {
             Log.d("COUNTRY: " + param1, ", CITY: " + param2);
-            url = "http://api.wunderground.com/api/" + getApplication().getResources().getString(R.string.API_KEY_WU) + "/astronomy/conditions/forecast/q/" + param1 + "/" + param2 + ".json";
+            url = "http://api.wunderground.com/api/" + getApplication().getResources().getString(R.string.API_KEY_WU) + "/astronomy/conditions/forecast10day/hourly/q/" + param1 + "/" + param2 + ".json";
         }
         Log.d("REQUEST URL", url);
         final WeatherGetter getter = new WeatherGetter();
@@ -109,6 +111,7 @@ public class LocationService extends Service implements LocationListener {
                             + sunPhase.getJSONObject("sunset").getInt("minute"));
 
                     JSONArray forecast = info.getJSONObject("forecast").getJSONObject("simpleforecast").getJSONArray("forecastday");
+                    JSONArray hourly = info.getJSONArray("hourly_forecast");
 
                     Intent intent = new Intent("weatherInfo");
                     intent.putExtra("location", location);
@@ -118,14 +121,15 @@ public class LocationService extends Service implements LocationListener {
                     intent.putExtra("sunrise", sunrise);
                     intent.putExtra("sunset", sunset);
                     intent.putExtra("forecast", forecast.toString());
-                    manager.sendBroadcast(intent);
+                    intent.putExtra("hourly", hourly.toString());
+                    LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
                 } catch (InterruptedException | ExecutionException e) {
                     e.printStackTrace();
                 } catch (JSONException e) {
                     e.printStackTrace();
                     Intent intent = new Intent("weatherInfo");
                     intent.putExtra("error", "No weather info was found, sorry!");
-                    manager.sendBroadcast(intent);
+                    LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
                 }
             }
         }).start();

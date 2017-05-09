@@ -2,39 +2,46 @@ package fi.hk.sunko;
 
 import android.graphics.drawable.ShapeDrawable;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
+import android.support.v7.app.AppCompatActivity;
+import android.view.WindowManager;
 import android.widget.ImageView;
 
 import com.rd.PageIndicatorView;
 import com.rd.animation.AnimationType;
 
+import org.json.JSONArray;
+
 /**
- * The main view of the application.
+ * The main activity of the application.
  *
  * @author Henri Kankaanpää
  * @version 1.0
  * @since 1.0
  */
-public class MainActivity extends FragmentActivity implements WeatherFragment.BGHelper {
+public class MainActivity extends AppCompatActivity implements WeatherFragment.BGHelper {
     FragmentPagerAdapter adapterViewPager;
     ShapeDrawable background;
+    JSONArray forecast;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        setStatusBarTranslucent(true);
+
         ViewPager vpPager = (ViewPager) findViewById(R.id.pager);
         adapterViewPager = new MyPagerAdapter(getSupportFragmentManager());
         vpPager.setAdapter(adapterViewPager);
         vpPager.setCurrentItem(1);
 
         PageIndicatorView pageIndicatorView = (PageIndicatorView) findViewById(R.id.pageIndicatorView);
-        pageIndicatorView.setViewPager(vpPager);
-        pageIndicatorView.setAnimationType(AnimationType.SCALE);
         pageIndicatorView.setSelection(1);
 
         // Attach the page change listener inside the activity
@@ -62,7 +69,6 @@ public class MainActivity extends FragmentActivity implements WeatherFragment.BG
                         sbg.setBackground(background);
                     }
                 }
-
             }
 
             // This method will be invoked when the current page is scrolled
@@ -87,7 +93,6 @@ public class MainActivity extends FragmentActivity implements WeatherFragment.BG
                         sbg.setBackground(background);
                     }
                 }
-
             }
 
             // Called when the scroll state changes:
@@ -97,6 +102,21 @@ public class MainActivity extends FragmentActivity implements WeatherFragment.BG
                 // Code goes here
             }
         });
+    }
+
+
+
+    /**
+     * Toggles the transparency of the status bar.
+     *
+     * @param makeTranslucent Boolean value to determine transparency
+     */
+    protected void setStatusBarTranslucent(boolean makeTranslucent) {
+        if (makeTranslucent) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        } else {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        }
     }
 
     @Override
@@ -109,11 +129,28 @@ public class MainActivity extends FragmentActivity implements WeatherFragment.BG
         return null;
     }
 
+    @Override
+    public void setForecast(JSONArray forecast) {
+        this.forecast = forecast;
+        FragmentManager fm = getSupportFragmentManager();
+        ForecastFragment ff = (ForecastFragment)fm.findFragmentById(R.id.forecastFragment);
+        if (ff != null) {
+            ff.setForecast(forecast);
+//            ff.adapter.notifyDataSetChanged();
 
-    public static class MyPagerAdapter extends FragmentPagerAdapter {
+        }
+    }
+
+    @Override
+    public JSONArray getForecast() {
+        return forecast;
+    }
+
+
+    private static class MyPagerAdapter extends FragmentPagerAdapter {
         private static int NUM_ITEMS = 3;
 
-        public MyPagerAdapter(FragmentManager fragmentManager) {
+        private MyPagerAdapter(FragmentManager fragmentManager) {
             super(fragmentManager);
         }
 

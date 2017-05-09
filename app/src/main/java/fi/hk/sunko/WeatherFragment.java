@@ -11,7 +11,6 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.RectShape;
-import android.graphics.drawable.shapes.Shape;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -49,6 +48,7 @@ import org.json.JSONObject;
  */
 public class WeatherFragment extends Fragment {
     BGHelper mListener;
+
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
@@ -84,7 +84,7 @@ public class WeatherFragment extends Fragment {
     private String title;
     private int page;
 
-    JSONArray forecast;
+    JSONArray hourlyForecast;
 
     AnimationUtil ani;
     RecyclerView rv;
@@ -97,19 +97,6 @@ public class WeatherFragment extends Fragment {
         args.putString("someTitle", title);
         weatherFragment.setArguments(args);
         return weatherFragment;
-    }
-
-    /**
-     * Toggles the transparency of the status bar.
-     *
-     * @param makeTranslucent Boolean value to determine transparency
-     */
-    protected void setStatusBarTranslucent(boolean makeTranslucent) {
-        if (makeTranslucent) {
-            getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
-        } else {
-            getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
-        }
     }
 
     /**
@@ -130,7 +117,7 @@ public class WeatherFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_weather, container, false);
 
-        forecast = new JSONArray();
+        hourlyForecast = new JSONArray();
         weatherDisplayHandler = new WeatherDisplayHandler();
         ani = new AnimationUtil();
 
@@ -146,7 +133,7 @@ public class WeatherFragment extends Fragment {
         weatherText        = (TextView)               view.findViewById(R.id.weatherTextView);
         infoText           = (TextView)               view.findViewById(R.id.infoText);
         progressBar        = (AVLoadingIndicatorView) view.findViewById(R.id.progressBar);
-        rv                 = (RecyclerView)           view.findViewById(R.id.rv);
+        rv                 = (RecyclerView)           view.findViewById(R.id.hrv);
         rv.setHasFixedSize(true);
 
         infoText.setText("Trying to find you...");
@@ -166,8 +153,6 @@ public class WeatherFragment extends Fragment {
                 pickCityDialog(v);
             }
         });
-
-        setStatusBarTranslucent(true);
 
         Typeface medium = Typeface.createFromAsset(getActivity().getAssets(), "fonts/Nunito-Bold.ttf");
         Typeface book = Typeface.createFromAsset(getActivity().getAssets(), "fonts/Nunito-SemiBold.ttf");
@@ -213,12 +198,13 @@ public class WeatherFragment extends Fragment {
      * the data, it is then displayed in the view.
      */
     public void getWeather() {
-        refreshButton.setClickable(false);
-        editLocationButton.setClickable(false);
 
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                refreshButton.setClickable(false);
+                editLocationButton.setClickable(false);
+
                 if (weatherIcon.getAlpha() != 0) {
                     ani.hideAnimation(weatherIcon);
                     ani.hideAnimation(temperatureText);
@@ -227,7 +213,6 @@ public class WeatherFragment extends Fragment {
                     ani.hideAnimation(infoText);
                     infoText.setText("Searching...");
                     ani.showAnimation(infoText);
-                    ani.hideAnimation(rv);
                 }
             }
         });
@@ -271,7 +256,6 @@ public class WeatherFragment extends Fragment {
                             ani.hideAnimation(progressBar);
                             ani.showAnimation(weatherText);
                             ani.showAnimation(infoText);
-                            ani.showAnimation(rv);
 
                             String location = finalIntent.getStringExtra("location");
                             String weatherType = finalIntent.getStringExtra("weatherType").equals("")
@@ -285,26 +269,30 @@ public class WeatherFragment extends Fragment {
                             double sunrise = finalIntent.getDoubleExtra("sunrise", 6);
                             double sunset = finalIntent.getDoubleExtra("sunset", 21);
 
-                            String jsonArray = finalIntent.getStringExtra("forecast");
-
-                            try {
-                                JSONArray array = new JSONArray(jsonArray);
-                                forecast = array;
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-
-                            RVAdapter adapter = new RVAdapter(forecast);
-                            rv.setAdapter(adapter);
-                            LinearLayoutManager llm = new LinearLayoutManager(getActivity().getApplicationContext(), LinearLayoutManager.HORIZONTAL, false);
-                            rv.setLayoutManager(llm);
-
                             locationText.setText(location);
 
                             weatherIcon.setImageResource(weatherDisplayHandler.setImage(weatherType, currentHour, sunrise, sunset));
                             infoText.setText(weatherDisplayHandler.setInfoText(weatherType, roundedTemp, currentHour, sunrise, sunset));
                             weatherText.setText(weatherType);
                             temperatureText.setText(roundedTemp + "°");
+
+                            String jsonArray = finalIntent.getStringExtra("hourly");
+                            String jsonForecast = finalIntent.getStringExtra("forecast");
+
+                            try {
+                                JSONArray array = new JSONArray(jsonArray);
+                                JSONArray forecastArray = new JSONArray((jsonForecast));
+                                mListener.setForecast(forecastArray);
+
+                                hourlyForecast = array;
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+
+                            RVAdapter adapter = new RVAdapter(hourlyForecast, sunrise, sunset);
+                            rv.setAdapter(adapter);
+                            LinearLayoutManager llm = new LinearLayoutManager(getActivity().getApplicationContext(), LinearLayoutManager.HORIZONTAL, false);
+                            rv.setLayoutManager(llm);
 
                             View v = getActivity().findViewById(R.id.weatherFragment);
                             int h = v.getHeight();
@@ -442,55 +430,57 @@ public class WeatherFragment extends Fragment {
     /**
      * Recycler view inner class that handles it's app logic.
      */
-    class RVAdapter extends RecyclerView.Adapter<RVAdapter.ForecastHolder>{
-        JSONArray forecast;
+    class RVAdapter extends RecyclerView.Adapter<RVAdapter.ForecastHolder> {
+        JSONArray hourlyForecast;
+        double sunrise;
+        double sunset;
 
         /**
          * Constructor for the adapter
          *
-         * @param forecast Forecast data to be displayed
+         * @param hourlyForecast Forecast data to be displayed
          */
-        RVAdapter(JSONArray forecast) {
-            this.forecast = forecast;
+        RVAdapter(JSONArray hourlyForecast, double sunrise, double sunset) {
+            this.hourlyForecast = hourlyForecast;
+            this.sunrise = sunrise;
+            this.sunset = sunset;
         }
 
         /**
          * Override method for creating RV's view holders.
          *
-         * @param parent Parent view group, in this case the main activity
+         * @param parent   Parent view group, in this case the main activity
          * @param viewType The type of view
          * @return The inflated holder view
          */
         @Override
         public ForecastHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.rv, parent, false);
-            v.setAlpha(0.2f);
-            v.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    v.setAlpha(1f);
-                }
-            });
+            View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.hrv, parent, false);
+            v.setAlpha(0.75f);
+
             return new ForecastHolder(v);
         }
 
         /**
          * Override method for binding the view holders.
          *
-         * @param holder The holder to be bound
+         * @param holder   The holder to be bound
          * @param position A self-increasing integer for iterating through the holders
          */
         @Override
         public void onBindViewHolder(ForecastHolder holder, int position) {
             try {
-                JSONObject dayforecast = (JSONObject) forecast.get(position);
-                String highTemp = dayforecast.getJSONObject("high").getString("celsius").equals("") ? "-" :
-                        dayforecast.getJSONObject("high").getString("celsius") + "°";
-                String lowTemp = dayforecast.getJSONObject("low").getString("celsius").equals("") ? "-" :
-                        dayforecast.getJSONObject("low").getString("celsius") + "°";
-                holder.tv.setText(highTemp + " | " + lowTemp);
-                holder.iv.setImageResource(weatherDisplayHandler.setImage(dayforecast.getString("conditions"), 12, 6, 21));
-                holder.dv.setText(dayforecast.getJSONObject("date").getString("weekday_short"));
+                JSONObject oneHourForecast = (JSONObject) hourlyForecast.get(position);
+                String highTemp = oneHourForecast.getJSONObject("temp").getString("metric").equals("") ? "-" :
+                        oneHourForecast.getJSONObject("temp").getString("metric") + "°";
+                double hour = Double.parseDouble(oneHourForecast.getJSONObject("FCTTIME").getString("hour"));
+                holder.tv.setText(highTemp);
+                holder.iv.setImageResource(weatherDisplayHandler.setImage(oneHourForecast.getString("condition"), hour, sunrise, sunset));
+                if (position == 0) {
+                    holder.dv.setText("Now");
+                } else {
+                    holder.dv.setText(oneHourForecast.getJSONObject("FCTTIME").getString("hour"));
+                }
 
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -498,13 +488,6 @@ public class WeatherFragment extends Fragment {
             Typeface book = Typeface.createFromAsset(getActivity().getAssets(), "fonts/Nunito-SemiBold.ttf");
             holder.tv.setTypeface(book);
             holder.dv.setTypeface(book);
-            holder.tv.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
-            holder.tv.setTextSize(16);
-            holder.dv.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
-            holder.dv.setTextSize(16);
-            holder.dv.setTextColor(Color.WHITE);
-            holder.tv.setTextColor(Color.WHITE);
-            holder.iv.setColorFilter(Color.WHITE);
         }
 
         /**
@@ -514,7 +497,7 @@ public class WeatherFragment extends Fragment {
          */
         @Override
         public int getItemCount() {
-            return forecast.length();
+            return hourlyForecast.length();
         }
 
         /**
@@ -532,16 +515,19 @@ public class WeatherFragment extends Fragment {
              */
             ForecastHolder(View itemView) {
                 super(itemView);
-                tv = (TextView) itemView.findViewById(R.id.rvtv);
-                dv = (TextView) itemView.findViewById(R.id.rvdv);
-                iv = (ImageView) itemView.findViewById(R.id.rviv);
+                tv = (TextView) itemView.findViewById(R.id.hrvtv);
+                dv = (TextView) itemView.findViewById(R.id.hrvdv);
+                iv = (ImageView) itemView.findViewById(R.id.hrviv);
 
             }
         }
     }
 
+
     public interface BGHelper {
         public void setBG(ShapeDrawable drawable);
         public ShapeDrawable getBG();
+        public void setForecast(JSONArray forecast);
+        public JSONArray getForecast();
     }
 }

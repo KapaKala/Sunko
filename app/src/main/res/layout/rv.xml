@@ -2,30 +2,68 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/rv"
-    android:orientation="vertical"
-    android:layout_width="wrap_content"
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingEnd="10dp">
+    android:paddingEnd="10dp"
+    android:paddingStart="10dp"
+    android:paddingBottom="20dp">
 
-    <TextView
-        android:id="@+id/rvdv"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textAlignment="center"
-        android:layout_marginBottom="5dp"
-        android:text="NO TEXT LOL" />
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_weight="0.33"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        <TextView
+            android:id="@+id/rvdv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="DATE"
+            android:textAlignment="viewStart"
+            android:textSize="16sp"
+            android:textColor="@android:color/white" />
+        <TextView
+            android:id="@+id/rvdnv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="DATE"
+            android:textAlignment="viewStart"
+            android:textSize="12sp"
+            android:alpha="0.5"
+            android:textColor="@android:color/white" />
+    </LinearLayout>
+
+
 
     <ImageView
         android:id="@+id/rviv"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:srcCompat="@drawable/ic_sun"
-        android:layout_marginBottom="5dp"/>
+        android:layout_width="0dp"
+        android:layout_height="36dp"
+        android:layout_marginBottom="5dp"
+        android:layout_weight="0.3"
+        android:layout_marginEnd="15dp"
+        android:layout_marginTop="7dp"
+        android:tint="@android:color/white"
+        app:srcCompat="@drawable/ic_sun" />
 
     <TextView
-        android:id="@+id/rvtv"
-        android:layout_width="match_parent"
+        android:id="@+id/rvthv"
+        android:layout_width="0dp"
+        android:layout_weight="0.1"
         android:layout_height="wrap_content"
-        android:textAlignment="center"
-        android:text="NO TEXT LOL" />
+        android:text="TEMP"
+        android:textAlignment="viewEnd"
+        android:textSize="16sp"
+        android:textColor="@android:color/white"/>
+
+    <TextView
+        android:id="@+id/rvtlv"
+        android:layout_width="0dp"
+        android:layout_weight="0.1"
+        android:layout_height="wrap_content"
+        android:text="TEMP"
+        android:alpha="0.5"
+        android:textAlignment="viewEnd"
+        android:textSize="16sp"
+        android:textColor="@android:color/white"/>
 </LinearLayout>
