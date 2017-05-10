@@ -18,11 +18,11 @@ class WeatherDisplayHandler {
     /**
      * Used to display SVG images converted to XML drawables based on weather information.
      *
-     * @param weatherType Name of the current type of weather
-     * @param currentHour Current time
-     * @param sunrise Sunrise time for the current location
-     * @param sunset Sunset time for the current location
-     * @return The ID of the drawable to be displayed
+     * @param weatherType name of the current type of weather
+     * @param currentHour current time
+     * @param sunrise sunrise time for the current location
+     * @param sunset sunset time for the current location
+     * @return the ID of the drawable to be displayed
      */
     int setImage(String weatherType, double currentHour, double sunrise, double sunset) {
 
@@ -53,7 +53,10 @@ class WeatherDisplayHandler {
                 case "Thunderstorm":
                     return R.drawable.ic_cloud_lightning;
                 case "Snow":
+                case "Snow Showers":
                     return R.drawable.ic_snow;
+                case "Chance of Snow":
+                    return R.drawable.ic_cloud_snow_sun;
                 case "Scattered Clouds":
                 case "Partly Cloudy":
                     return R.drawable.ic_cloud_sun;
@@ -76,6 +79,7 @@ class WeatherDisplayHandler {
                     return R.drawable.ic_cloud_drizzle;
                 case "Rain":
                     return R.drawable.ic_cloud_rain;
+                case "Light Rain":
                 case "Light Rain Showers":
                     return R.drawable.ic_cloud_rain_2;
                 case "Chance of Rain":
@@ -85,7 +89,10 @@ class WeatherDisplayHandler {
                 case "Thunderstorm":
                     return R.drawable.ic_cloud_lightning;
                 case "Snow":
+                case "Snow Showers":
                     return R.drawable.ic_snow;
+                case "Chance of Snow":
+                    return R.drawable.ic_cloud_snow_moon;
                 case "Scattered Clouds":
                 case "Partly Cloudy":
                     return R.drawable.ic_cloud_moon;
@@ -104,12 +111,12 @@ class WeatherDisplayHandler {
     /**
      * Used to get a background shader gradient based on the current weather information.
      *
-     * @param h The height of the screen
-     * @param weatherType Name of the current type of weather
-     * @param currentHour Current time
-     * @param sunrise Sunrise time for the current location
-     * @param sunset Sunset time for the current location
-     * @return Shader that reflects the current weather
+     * @param h the height of the screen
+     * @param weatherType name of the current type of weather
+     * @param currentHour current time
+     * @param sunrise sunrise time for the current location
+     * @param sunset sunset time for the current location
+     * @return shader that reflects the current weather
      */
     Shader setBackgroundGradient(int h, String weatherType, double currentHour, double sunrise, double sunset) {
         ShapeDrawable mDrawable = new ShapeDrawable(new RectShape());
@@ -134,6 +141,7 @@ class WeatherDisplayHandler {
                 case "Rain":
                     return mDrawable.getPaint().setShader(new LinearGradient(0, 0, 0, h, Color.parseColor("#5b7089"), Color.parseColor("#91acd2"), Shader.TileMode.REPEAT));
                 case "Ice Pellets":
+                case "Snow Showers":
                 case "Snow":
                     return mDrawable.getPaint().setShader(new LinearGradient(0, 0, 0, h, Color.parseColor("#606b80"), Color.parseColor("#dadde2"), Shader.TileMode.REPEAT));
                 case "Scattered Clouds":
@@ -151,10 +159,12 @@ class WeatherDisplayHandler {
                 case "Cloudy":
                     return mDrawable.getPaint().setShader(new LinearGradient(0, 0, 0, h, Color.parseColor("#283341"), Color.parseColor("#435a79"), Shader.TileMode.REPEAT));
                 case "Drizzle":
+                case "Light Rain":
                 case "Light Rain Showers":
                 case "Rain":
                     return mDrawable.getPaint().setShader(new LinearGradient(0, 0, 0, h, Color.parseColor("#0f1632"), Color.parseColor("#534f60"), Shader.TileMode.REPEAT));
                 case "Ice Pellets":
+                case "Snow Showers":
                 case "Snow":
                     return mDrawable.getPaint().setShader(new LinearGradient(0, 0, 0, h, Color.parseColor("#1c283f"), Color.parseColor("#7e96b7"), Shader.TileMode.REPEAT));
                 case "Scattered Clouds":
@@ -169,14 +179,14 @@ class WeatherDisplayHandler {
     /**
      * Used to display a string of text based on current weather information.
      *
-     * @param weatherType Name of the current type of weather
-     * @param currentHour Current time
-     * @param sunrise Sunrise time for the current location
-     * @param sunset Sunset time for the current location
-     * @return String that describes current weather
+     * @param weatherType name of the current type of weather
+     * @param currentHour current time
+     * @param sunrise sunrise time for the current location
+     * @param sunset sunset time for the current location
+     * @return string that describes current weather
      */
     String setInfoText(String weatherType, int temperature, double currentHour, double sunrise, double sunset) {
-        if (temperature > 16) {
+        if (temperature > 15) {
             if (currentHour < sunrise + 1 && currentHour > sunrise - 1 && weatherType.equals("Clear")) {
                 return "Weather seems nice, the sun is just rising";
             } else if (currentHour < sunset + 1 && currentHour > sunset - 1 && weatherType.equals("Clear")) {
@@ -184,7 +194,7 @@ class WeatherDisplayHandler {
             } else if (currentHour < sunset && currentHour > sunrise) {
                 switch (weatherType) {
                     case "Clear":
-                        return "Weather seems nice, go outside, get some sun!";
+                        return "Weather seems nice, go outside, get some sun";
                     case "Overcast":
                     case "Cloudy":
                     case "Mostly Cloudy":
@@ -192,7 +202,7 @@ class WeatherDisplayHandler {
                     case "Drizzle":
                     case "Rain":
                     case "Light Rain Showers":
-                        return "You might need an umbrella";
+                        return "You might need\nan umbrella";
                     case "Scattered Clouds":
                     case "Partly Cloudy":
                         return "You might be able to catch some sun";
@@ -203,9 +213,18 @@ class WeatherDisplayHandler {
                 return "Ain't no sun at night";
             }
         } else if (temperature > 8){
-            return "It's not very warm, you might need a jacket";
+            switch (weatherType) {
+                case "Rain":
+                case "Chance of Rain":
+                case "Light Rain Showers":
+                case "Drizzle":
+                    return "You might need\nan umbrella";
+                default:
+                    return "It's not very warm,\n you might need a jacket";
+            }
+
         } else {
-            return "It's cold, grab a jacket";
+            return "It's cold,\n grab a jacket";
         }
     }
 }

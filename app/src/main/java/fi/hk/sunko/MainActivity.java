@@ -1,19 +1,19 @@
 package fi.hk.sunko;
 
+import android.Manifest;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.drawable.ShapeDrawable;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.view.WindowManager;
 import android.widget.ImageView;
-
-import com.rd.PageIndicatorView;
-import com.rd.animation.AnimationType;
 
 import org.json.JSONArray;
 
@@ -28,32 +28,53 @@ public class MainActivity extends AppCompatActivity implements WeatherFragment.B
     FragmentPagerAdapter adapterViewPager;
     ShapeDrawable background;
     JSONArray forecast;
+    SharedPreferences prefs;
+    final String tempFormatKey = "fi.hk.sunko.tempformat";
 
+
+    /**
+     * Checks wether or not permission has been given to use location services.
+     *
+     * @param context application context
+     * @return true if permissions are given, false if not
+     */
+    public static boolean checkPermission(final Context context) {
+        return ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * Override method for the onCreate lifecycle method. Sets up the defaults for the app, as well
+     * as the view pager.
+     *
+     * @param savedInstanceState saved instance state of the application
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        prefs = this.getSharedPreferences("fi.hk.sunko", Context.MODE_PRIVATE);
+        prefs.getString(tempFormatKey, "c");
 
         setStatusBarTranslucent(true);
 
         ViewPager vpPager = (ViewPager) findViewById(R.id.pager);
         adapterViewPager = new MyPagerAdapter(getSupportFragmentManager());
         vpPager.setAdapter(adapterViewPager);
-        vpPager.setCurrentItem(1);
-
-        PageIndicatorView pageIndicatorView = (PageIndicatorView) findViewById(R.id.pageIndicatorView);
-        pageIndicatorView.setSelection(1);
 
         // Attach the page change listener inside the activity
         vpPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
 
-            // This method will be invoked when a new page becomes selected.
+            /**
+             * Invoked when a new page is selected.
+             * @param position the newly selected page
+             */
             @Override
             public void onPageSelected(int position) {
                 ImageView wbg1 = (ImageView) findViewById(R.id.primaryBG);
                 ImageView wbg2 = (ImageView) findViewById(R.id.secondaryBG);
                 ImageView fbg = (ImageView) findViewById(R.id.forecastBG);
-                ImageView sbg = (ImageView) findViewById(R.id.settingsBG);
 
                 if (background != null) {
                     if (wbg1 != null) {
@@ -65,19 +86,21 @@ public class MainActivity extends AppCompatActivity implements WeatherFragment.B
                     if (fbg != null) {
                         fbg.setBackground(background);
                     }
-                    if (sbg != null) {
-                        sbg.setBackground(background);
-                    }
                 }
             }
 
-            // This method will be invoked when the current page is scrolled
+            /**
+             * Invoked when the current page is scrolled.
+             *
+             * @param position the position on the page
+             * @param positionOffset position's offset
+             * @param positionOffsetPixels position's offset in pixels
+             */
             @Override
             public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
                 ImageView wbg1 = (ImageView) findViewById(R.id.primaryBG);
                 ImageView wbg2 = (ImageView) findViewById(R.id.secondaryBG);
                 ImageView fbg = (ImageView) findViewById(R.id.forecastBG);
-                ImageView sbg = (ImageView) findViewById(R.id.settingsBG);
 
                 if (background != null) {
                     if (wbg1 != null) {
@@ -89,14 +112,14 @@ public class MainActivity extends AppCompatActivity implements WeatherFragment.B
                     if (fbg != null) {
                         fbg.setBackground(background);
                     }
-                    if (sbg != null) {
-                        sbg.setBackground(background);
-                    }
                 }
             }
 
-            // Called when the scroll state changes:
-            // SCROLL_STATE_IDLE, SCROLL_STATE_DRAGGING, SCROLL_STATE_SETTLING
+            /**
+             * Called when scroll state changes.
+             *
+             * @param state current scroll state
+             */
             @Override
             public void onPageScrollStateChanged(int state) {
                 // Code goes here
@@ -104,12 +127,10 @@ public class MainActivity extends AppCompatActivity implements WeatherFragment.B
         });
     }
 
-
-
     /**
      * Toggles the transparency of the status bar.
      *
-     * @param makeTranslucent Boolean value to determine transparency
+     * @param makeTranslucent boolean value to determine transparency
      */
     protected void setStatusBarTranslucent(boolean makeTranslucent) {
         if (makeTranslucent) {
@@ -119,14 +140,24 @@ public class MainActivity extends AppCompatActivity implements WeatherFragment.B
         }
     }
 
+    /**
+     * Override method for the background helper interface, sets the background.
+     *
+     * @param drawable background drawable sent by the weather fragment
+     */
     @Override
     public void setBG(ShapeDrawable drawable) {
         background = drawable;
     }
 
+    /**
+     * Override method for the background helper interface, returns the background drawable.
+     *
+     * @return the background drawable
+     */
     @Override
     public ShapeDrawable getBG() {
-        return null;
+        return background;
     }
 
     @Override
@@ -136,19 +167,26 @@ public class MainActivity extends AppCompatActivity implements WeatherFragment.B
         ForecastFragment ff = (ForecastFragment)fm.findFragmentById(R.id.forecastFragment);
         if (ff != null) {
             ff.setForecast(forecast);
-//            ff.adapter.notifyDataSetChanged();
+            ff.adapter.notifyDataSetChanged();
 
         }
     }
 
+    /**
+     * Override method for the background helper interface, returns the forecast data.
+     *
+     * @return the forecast data
+     */
     @Override
     public JSONArray getForecast() {
         return forecast;
     }
 
-
+    /**
+     * View pager adapter, enables swiping between fragments.
+     */
     private static class MyPagerAdapter extends FragmentPagerAdapter {
-        private static int NUM_ITEMS = 3;
+        private static int NUM_ITEMS = 2;
 
         private MyPagerAdapter(FragmentManager fragmentManager) {
             super(fragmentManager);
@@ -165,11 +203,9 @@ public class MainActivity extends AppCompatActivity implements WeatherFragment.B
         public Fragment getItem(int position) {
             switch (position) {
                 case 0:
-                    return SettingsFragment.newInstance(0, "Page # 1");
+                    return WeatherFragment.newInstance(0, "Page # 1");
                 case 1:
-                    return WeatherFragment.newInstance(1, "Page # 3");
-                case 2:
-                    return ForecastFragment.newInstance(2, "Page # 2");
+                    return ForecastFragment.newInstance(1, "Page # 2");
                 default:
                     return null;
             }

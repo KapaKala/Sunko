@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout
     android:id="@+id/weatherFragment"
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
+
     tools:context="fi.hk.sunko.WeatherFragment">
 
     <ImageView
@@ -30,7 +32,7 @@
         android:layout_height="76dp"
         android:layout_centerHorizontal="true"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="220dp"/>
+        android:layout_marginBottom="240dp"/>
 
     <ImageView
         android:id="@+id/imageView"
@@ -79,24 +81,28 @@
         android:id="@+id/infoText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textAlignment="center"
-        android:textColor="@android:color/background_light"
-        android:textSize="34sp"
         android:layout_below="@+id/refreshButton"
         android:layout_centerHorizontal="true"
-        android:layout_marginStart="20dp"
         android:layout_marginEnd="20dp"
-        android:layout_marginTop="30dp"/>
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="30dp"
+        android:textAlignment="center"
+        android:textColor="@android:color/background_light"
+        android:textSize="34sp"/>
 
     <ImageButton
         android:id="@+id/refreshButton"
         style="@android:style/Widget.Holo.Light.ImageButton"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
         android:layout_alignParentEnd="true"
         android:layout_marginBottom="24dp"
-        android:layout_marginEnd="20dp"
-        android:layout_marginTop="40dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginTop="30dp"
+        android:paddingBottom="10dp"
+        android:paddingTop="10dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
         android:background="@android:color/transparent"
         android:elevation="2dp"
         android:scaleType="fitXY"
@@ -105,10 +111,14 @@
 
     <ImageButton
         android:id="@+id/editLocationButton"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
         android:layout_alignTop="@+id/refreshButton"
-        android:layout_marginStart="20dp"
+        android:layout_marginStart="10dp"
+        android:paddingBottom="10dp"
+        android:paddingTop="10dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
         android:background="@android:color/transparent"
         android:scaleType="fitXY"
         android:tint="#feffffff"
@@ -119,18 +129,64 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_toEndOf="@+id/editLocationButton"
-        android:layout_alignBottom="@+id/editLocationButton"
         android:layout_alignTop="@+id/editLocationButton"
-        android:layout_marginTop="5dp"
+        android:layout_marginTop="15dp"
+        android:layout_marginStart="-5dp"
+        android:layout_marginEnd="72dp"
         android:textColor="@android:color/background_light"
         android:textSize="16sp"/>
 
-    <android.support.v7.widget.RecyclerView
-        android:id="@+id/hrv"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        tools:listitem="@android:layout/simple_gallery_item"
+
+
+    <ScrollView android:layout_height="100dp"
+        android:layout_width="match_parent"
         android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginBottom="50dp"/>
+        android:layout_marginBottom="30dp">
+        <LinearLayout
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:orientation="vertical">
+            <android.support.v7.widget.RecyclerView
+                android:id="@+id/hrv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:listitem="@android:layout/simple_gallery_item"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="20dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="10dp">
+
+                <TextView
+                    android:id="@+id/tempCView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:alpha="0"
+                    android:background="@android:color/white"
+                    android:text="°C"
+                    android:textAlignment="center"
+                    android:textSize="20sp" />
+
+                <TextView
+                    android:id="@+id/tempFView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:alpha="0"
+                    android:text="°F"
+                    android:textAlignment="center"
+                    android:textColor="@android:color/white"
+                    android:textSize="20sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+
+    </ScrollView>
+
+
 </RelativeLayout>
+

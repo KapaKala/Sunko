@@ -11,7 +11,9 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.RectShape;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -24,7 +26,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.EditText;
@@ -39,8 +40,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import static fi.hk.sunko.MainActivity.checkPermission;
+
 /**
- * The main view of the application.
+ * Fragment for displaying current weather.
  *
  * @author Henri Kankaanpää
  * @version 1.0
@@ -48,16 +51,6 @@ import org.json.JSONObject;
  */
 public class WeatherFragment extends Fragment {
     BGHelper mListener;
-
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        try {
-            mListener = (BGHelper) getActivity();
-        } catch (ClassCastException e) {
-            throw new ClassCastException(getActivity().toString() + " must implement OnArticleSelectedListener");
-        }
-    }
 
     final int PERMISSION_REQUEST_ID = 0;
 
@@ -70,19 +63,21 @@ public class WeatherFragment extends Fragment {
     ImageView weatherBG1;
     ImageView weatherBG2;
     ImageView forecastBG;
-    ImageView settingsBG;
     ImageButton refreshButton;
     ImageButton editLocationButton;
     TextView locationText;
     TextView temperatureText;
     TextView weatherText;
     TextView infoText;
+    TextView tempCView;
+    TextView tempFView;
     AVLoadingIndicatorView progressBar;
     Intent intent;
     ShapeDrawable mDrawable;
 
-    private String title;
-    private int page;
+    LocationManager locationManager;
+    boolean isGPSEnabled = false;
+    boolean isNetworkEnabled = false;
 
     JSONArray hourlyForecast;
 
@@ -90,6 +85,13 @@ public class WeatherFragment extends Fragment {
     RecyclerView rv;
     WeatherDisplayHandler weatherDisplayHandler;
 
+    /**
+     * NewInstance constructor for creating a fragment with arguments.
+     *
+     * @param page the fragment's page
+     * @param title the fragment's title
+     * @return the created fragment itself
+     */
     public static WeatherFragment newInstance(int page, String title) {
         WeatherFragment weatherFragment = new WeatherFragment();
         Bundle args = new Bundle();
@@ -100,22 +102,34 @@ public class WeatherFragment extends Fragment {
     }
 
     /**
-     * Override method for onCreate, called when activity is created.
+     * Override method for the onAttach lifecycle method.
      *
-     * @param savedInstanceState Application's saved instance state
+     * @param context application context
      */
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        page = getArguments().getInt("someInt", 0);
-        title = getArguments().getString("someTitle");
-
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        try {
+            mListener = (BGHelper) getActivity();
+        } catch (ClassCastException e) {
+            throw new ClassCastException(getActivity().toString() + " must implement OnArticleSelectedListener");
+        }
     }
 
+    /**
+     * Override method for the onCreateView lifecycle method. Sets up the fragment.
+     *
+     * @param inflater inflater, used for inflating the view
+     * @param container not used
+     * @param savedInstanceState not used
+     * @return the view
+     */
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_weather, container, false);
+
+        locationManager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
 
         hourlyForecast = new JSONArray();
         weatherDisplayHandler = new WeatherDisplayHandler();
@@ -125,18 +139,19 @@ public class WeatherFragment extends Fragment {
         weatherBG1         = (ImageView)              view.findViewById(R.id.primaryBG);
         weatherBG2         = (ImageView)              view.findViewById(R.id.secondaryBG);
         forecastBG         = (ImageView)              view.findViewById(R.id.forecastBG);
-        settingsBG         = (ImageView)              view.findViewById(R.id.settingsBG);
         refreshButton      = (ImageButton)            view.findViewById(R.id.refreshButton);
         editLocationButton = (ImageButton)            view.findViewById(R.id.editLocationButton);
         locationText       = (TextView)               view.findViewById(R.id.locationTextView);
         temperatureText    = (TextView)               view.findViewById(R.id.temperatureView);
         weatherText        = (TextView)               view.findViewById(R.id.weatherTextView);
         infoText           = (TextView)               view.findViewById(R.id.infoText);
+        tempCView          = (TextView)               view.findViewById(R.id.tempCView);
+        tempFView          = (TextView)               view.findViewById(R.id.tempFView);
         progressBar        = (AVLoadingIndicatorView) view.findViewById(R.id.progressBar);
         rv                 = (RecyclerView)           view.findViewById(R.id.hrv);
         rv.setHasFixedSize(true);
 
-        infoText.setText("Trying to find you...");
+//        infoText.setText("Trying to find you...");
 
         weatherIcon.setColorFilter(Color.WHITE);
 
@@ -154,6 +169,49 @@ public class WeatherFragment extends Fragment {
             }
         });
 
+        tempCView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ((MainActivity)getActivity()).prefs.edit().putString(
+                        ((MainActivity)getActivity()).tempFormatKey, "c"
+                ).apply();
+                System.out.println("TEMP SETTING SET TO C");
+                tempCView.setBackgroundColor(Color.WHITE);
+                tempCView.setTextColor(Color.GRAY);
+                tempFView.setBackgroundColor(Color.TRANSPARENT);
+                tempFView.setTextColor(Color.WHITE);
+                getWeather();
+            }
+        });
+
+        tempFView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ((MainActivity)getActivity()).prefs.edit().putString(
+                        ((MainActivity)getActivity()).tempFormatKey, "f"
+                ).apply();
+                System.out.println("TEMP SETTING SET TO F");
+                tempFView.setBackgroundColor(Color.WHITE);
+                tempFView.setTextColor(Color.GRAY);
+                tempCView.setBackgroundColor(Color.TRANSPARENT);
+                tempCView.setTextColor(Color.WHITE);
+                getWeather();
+
+            }
+        });
+
+        if (((MainActivity)getActivity()).prefs.getString(((MainActivity)getActivity()).tempFormatKey, "c").equals("c")) {
+            tempCView.setBackgroundColor(Color.WHITE);
+            tempCView.setTextColor(Color.GRAY);
+            tempFView.setBackgroundColor(Color.TRANSPARENT);
+            tempFView.setTextColor(Color.WHITE);
+        } else {
+            tempFView.setBackgroundColor(Color.WHITE);
+            tempFView.setTextColor(Color.GRAY);
+            tempCView.setBackgroundColor(Color.TRANSPARENT);
+            tempCView.setTextColor(Color.WHITE);
+        }
+
         Typeface medium = Typeface.createFromAsset(getActivity().getAssets(), "fonts/Nunito-Bold.ttf");
         Typeface book = Typeface.createFromAsset(getActivity().getAssets(), "fonts/Nunito-SemiBold.ttf");
         infoText.setTypeface(medium);
@@ -169,15 +227,6 @@ public class WeatherFragment extends Fragment {
     }
 
     /**
-     * Override method for onStart lifecycle method.
-     */
-    @Override
-    public void onStart() {
-        super.onStart();
-    }
-
-
-    /**
      * Displays a dialog for confirming permission to use location services.
      */
     private void showPermissionDialog() {
@@ -191,11 +240,11 @@ public class WeatherFragment extends Fragment {
     }
 
     /**
-     * Method for getting weather info into the main activity.
+     * Method for getting weather info.
      *
      * Starts the LocationService service, which manages fetching the user's location, then gets
-     * the weather information from the Weather Underground API, and returns it here. Upon receiving
-     * the data, it is then displayed in the view.
+     * the weather information from the Weather Underground API. A local broadcast manager
+     * receives what is sent by the service and alters the UI accordingly.
      */
     public void getWeather() {
 
@@ -235,76 +284,79 @@ public class WeatherFragment extends Fragment {
             public void onReceive(Context context, Intent intent) {
                 final Intent finalIntent = intent;
 
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        refreshButton.setClickable(true);
-                        editLocationButton.setClickable(true);
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            refreshButton.setClickable(true);
+                            editLocationButton.setClickable(true);
 
-                        String error = finalIntent.getStringExtra("error");
+                            String error = finalIntent.getStringExtra("error");
 
-                        if (error != null) {
-                            ani.showAnimation(infoText);
-                            ani.hideAnimation(progressBar);
-                            ani.showAnimation(weatherText);
-                            infoText.setText("No weather info found, try again!");
-                            weatherText.setText(":(");
-                            locationText.setText("");
-                        } else {
-                            ani.showAnimation(weatherIcon);
-                            ani.showAnimation(temperatureText);
-                            ani.hideAnimation(progressBar);
-                            ani.showAnimation(weatherText);
-                            ani.showAnimation(infoText);
+                            if (error != null) {
+                                ani.showAnimation(infoText);
+                                ani.hideAnimation(progressBar);
+                                ani.showAnimation(weatherText);
+                                infoText.setText(error);
+                                weatherText.setText(":(");
+                                locationText.setText("");
+                            } else {
+                                tempCView.setAlpha(1f);
+                                tempFView.setAlpha(1f);
+                                ani.showAnimation(weatherIcon);
+                                ani.showAnimation(temperatureText);
+                                ani.hideAnimation(progressBar);
+                                ani.showAnimation(weatherText);
+                                ani.showAnimation(infoText);
 
-                            String location = finalIntent.getStringExtra("location");
-                            String weatherType = finalIntent.getStringExtra("weatherType").equals("")
-                                    ? "Clear"
-                                    : finalIntent.getStringExtra("weatherType");
-                            String temperature = finalIntent.getStringExtra("temperature").equals("")
-                                    ? "0"
-                                    : finalIntent.getStringExtra("temperature");
-                            int roundedTemp = (int) Math.floor(Double.parseDouble(temperature));
-                            double currentHour = finalIntent.getDoubleExtra("currentHour", 0);
-                            double sunrise = finalIntent.getDoubleExtra("sunrise", 6);
-                            double sunset = finalIntent.getDoubleExtra("sunset", 21);
+                                String location = finalIntent.getStringExtra("location");
+                                String weatherType = finalIntent.getStringExtra("weatherType").equals("")
+                                        ? "Clear"
+                                        : finalIntent.getStringExtra("weatherType");
+                                String temperature = finalIntent.getStringExtra("temperature").equals("")
+                                        ? "0"
+                                        : finalIntent.getStringExtra("temperature");
+                                int roundedTemp = (int) Math.round(Double.parseDouble(temperature));
+                                double currentHour = finalIntent.getDoubleExtra("currentHour", 0);
+                                double sunrise = finalIntent.getDoubleExtra("sunrise", 6);
+                                double sunset = finalIntent.getDoubleExtra("sunset", 21);
 
-                            locationText.setText(location);
+                                locationText.setText(location);
 
-                            weatherIcon.setImageResource(weatherDisplayHandler.setImage(weatherType, currentHour, sunrise, sunset));
-                            infoText.setText(weatherDisplayHandler.setInfoText(weatherType, roundedTemp, currentHour, sunrise, sunset));
-                            weatherText.setText(weatherType);
-                            temperatureText.setText(roundedTemp + "°");
+                                weatherIcon.setImageResource(weatherDisplayHandler.setImage(weatherType, currentHour, sunrise, sunset));
+                                infoText.setText(weatherDisplayHandler.setInfoText(weatherType, roundedTemp, currentHour, sunrise, sunset));
+                                weatherText.setText(weatherType);
+                                temperatureText.setText(roundedTemp + "°");
 
-                            String jsonArray = finalIntent.getStringExtra("hourly");
-                            String jsonForecast = finalIntent.getStringExtra("forecast");
+                                String jsonArray = finalIntent.getStringExtra("hourly");
+                                String jsonForecast = finalIntent.getStringExtra("forecast");
 
-                            try {
-                                JSONArray array = new JSONArray(jsonArray);
-                                JSONArray forecastArray = new JSONArray((jsonForecast));
-                                mListener.setForecast(forecastArray);
+                                try {
+                                    JSONArray array = new JSONArray(jsonArray);
+                                    JSONArray forecastArray = new JSONArray((jsonForecast));
+                                    mListener.setForecast(forecastArray);
 
-                                hourlyForecast = array;
-                            } catch (JSONException e) {
-                                e.printStackTrace();
+                                    hourlyForecast = array;
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+
+                                RVAdapter adapter = new RVAdapter(hourlyForecast, sunrise, sunset);
+                                rv.setAdapter(adapter);
+                                LinearLayoutManager llm = new LinearLayoutManager(getActivity().getApplicationContext(), LinearLayoutManager.HORIZONTAL, false);
+                                rv.setLayoutManager(llm);
+
+                                View v = getActivity().findViewById(R.id.weatherFragment);
+                                int h = v.getHeight();
+                                mDrawable = new ShapeDrawable(new RectShape());
+                                mDrawable.getPaint().setShader(weatherDisplayHandler.setBackgroundGradient(h, weatherType, currentHour, sunrise, sunset));
+
+                                ani.animateBackground(weatherBG1, weatherBG2, mDrawable);
+                                mListener.setBG(mDrawable);
                             }
-
-                            RVAdapter adapter = new RVAdapter(hourlyForecast, sunrise, sunset);
-                            rv.setAdapter(adapter);
-                            LinearLayoutManager llm = new LinearLayoutManager(getActivity().getApplicationContext(), LinearLayoutManager.HORIZONTAL, false);
-                            rv.setLayoutManager(llm);
-
-                            View v = getActivity().findViewById(R.id.weatherFragment);
-                            int h = v.getHeight();
-                            mDrawable = new ShapeDrawable(new RectShape());
-                            mDrawable.getPaint().setShader(weatherDisplayHandler.setBackgroundGradient(h, weatherType, currentHour, sunrise, sunset));
-
-                            ani.animateBackground(weatherBG1, weatherBG2, mDrawable);
-                            mListener.setBG(mDrawable);
                         }
-                    }
-                });
-
+                    });
+                }
 
                 if (bound) {
                     Intent i = new Intent(getActivity(), LocationService.class);
@@ -320,19 +372,43 @@ public class WeatherFragment extends Fragment {
         }, new IntentFilter("weatherInfo"));
     }
 
-    public ShapeDrawable getmDrawable() {
-        return mDrawable;
-    }
-
     /**
-     * Override method for the onResume lifecycle method.
+     * Override method for the onResume lifecycle method. Checks if the app has location
+     * permissions and whether or not GPS and network location services are enabled, and prompts
+     * the user to fix if necessary.
      */
     @Override
     public void onResume() {
         super.onResume();
 
         if (!bound) {
-            getWeather();
+            if (checkPermission(getContext())) {
+                isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+                isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+
+                if (!isGPSEnabled && !isNetworkEnabled) {
+                    android.app.AlertDialog.Builder dialog = new android.app.AlertDialog.Builder(getContext());
+                    dialog.setTitle("Your location services seem to be disabled");
+                    dialog.setMessage("Please enable them if you would like for the app to find weather information for your current location. \n\n" +
+                            "Otherwise you can click cancel and manually search for a location.");
+                    dialog.setPositiveButton("Open location settings", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            Intent myIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                            getContext().startActivity(myIntent);
+                        }
+                    });
+                    dialog.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            pickCityDialog(getView());
+                        }
+                    });
+                    dialog.show();
+                } else {
+                    getWeather();
+                }
+            }
         }
     }
 
@@ -340,15 +416,14 @@ public class WeatherFragment extends Fragment {
     /**
      * Handles permissions upon receiving them.
      *
-     * @param requestCode The request code used in getting specific permissions
-     * @param permissions An array of permissions
-     * @param grantResults An array of the results of a permission query
+     * @param requestCode the request code used in getting specific permissions
+     * @param permissions an array of permissions
+     * @param grantResults an array of the results of a permission query
      */
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == PERMISSION_REQUEST_ID) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                System.out.println("PERMISSION GIVEN");
                 try {
                     Intent intent = new Intent(getActivity(), LocationService.class);
                     getActivity().startService(intent);
@@ -364,7 +439,7 @@ public class WeatherFragment extends Fragment {
     /**
      * Method used by the refresh ImageButton for refreshing the current weather information.
      *
-     * @param v The view that calls this method
+     * @param v the view that calls this method
      */
     public void refresh(View v) {
         Animation rotation = AnimationUtils.loadAnimation(getActivity(), R.anim.refresh_rotate);
@@ -375,7 +450,7 @@ public class WeatherFragment extends Fragment {
     /**
      * Dialog for selecting a city/area or your current location.
      *
-     * @param v The view that calls this method
+     * @param v the view that calls this method
      */
     public void pickCityDialog(View v) {
         LayoutInflater linf = LayoutInflater.from(getActivity());
@@ -412,7 +487,11 @@ public class WeatherFragment extends Fragment {
                 locationCity = "";
                 locationCountry = "";
 
-                getWeather();
+                if (!checkPermission(getContext())) {
+                    showPermissionDialog();
+                } else {
+                    getWeather();
+                }
             }
         });
 
@@ -428,7 +507,7 @@ public class WeatherFragment extends Fragment {
     }
 
     /**
-     * Recycler view inner class that handles it's app logic.
+     * Recycler view adapter that handles what is displayed in the recycler view.
      */
     class RVAdapter extends RecyclerView.Adapter<RVAdapter.ForecastHolder> {
         JSONArray hourlyForecast;
@@ -438,7 +517,7 @@ public class WeatherFragment extends Fragment {
         /**
          * Constructor for the adapter
          *
-         * @param hourlyForecast Forecast data to be displayed
+         * @param hourlyForecast forecast data to be displayed
          */
         RVAdapter(JSONArray hourlyForecast, double sunrise, double sunset) {
             this.hourlyForecast = hourlyForecast;
@@ -449,9 +528,9 @@ public class WeatherFragment extends Fragment {
         /**
          * Override method for creating RV's view holders.
          *
-         * @param parent   Parent view group, in this case the main activity
-         * @param viewType The type of view
-         * @return The inflated holder view
+         * @param parent   parent view group, in this case the main activity
+         * @param viewType the type of view
+         * @return the inflated holder view
          */
         @Override
         public ForecastHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -462,17 +541,24 @@ public class WeatherFragment extends Fragment {
         }
 
         /**
-         * Override method for binding the view holders.
+         * Override method for binding the view holders. Sets up the displaying of the hourly
+         * forecast.
          *
-         * @param holder   The holder to be bound
-         * @param position A self-increasing integer for iterating through the holders
+         * @param holder   the holder to be bound
+         * @param position a self-increasing integer for iterating through the holders
          */
         @Override
         public void onBindViewHolder(ForecastHolder holder, int position) {
             try {
                 JSONObject oneHourForecast = (JSONObject) hourlyForecast.get(position);
-                String highTemp = oneHourForecast.getJSONObject("temp").getString("metric").equals("") ? "-" :
-                        oneHourForecast.getJSONObject("temp").getString("metric") + "°";
+                String highTemp = oneHourForecast.getJSONObject("temp").getString(
+                        ((MainActivity)getActivity()).prefs.getString(((MainActivity)getActivity()).tempFormatKey, "c").equals("c")
+                                ? "metric"
+                                : "english"
+                ).equals("") ? "-" :
+                        oneHourForecast.getJSONObject("temp").getString(((MainActivity)getActivity()).prefs.getString(((MainActivity)getActivity()).tempFormatKey, "c").equals("c")
+                                ? "metric"
+                                : "english") + "°";
                 double hour = Double.parseDouble(oneHourForecast.getJSONObject("FCTTIME").getString("hour"));
                 holder.tv.setText(highTemp);
                 holder.iv.setImageResource(weatherDisplayHandler.setImage(oneHourForecast.getString("condition"), hour, sunrise, sunset));
@@ -493,7 +579,7 @@ public class WeatherFragment extends Fragment {
         /**
          * Getter for amount of items in the recycler view.
          *
-         * @return Amount of items in the view
+         * @return amount of items in the view
          */
         @Override
         public int getItemCount() {
@@ -511,7 +597,7 @@ public class WeatherFragment extends Fragment {
             /**
              * Constructor for the view holder.
              *
-             * @param itemView The view that is inflated into the holders
+             * @param itemView the view that is inflated into the holders
              */
             ForecastHolder(View itemView) {
                 super(itemView);
@@ -523,8 +609,10 @@ public class WeatherFragment extends Fragment {
         }
     }
 
-
-    public interface BGHelper {
+    /**
+     * An interface for sending background shader info to be used in other fragments.
+     */
+    interface BGHelper {
         public void setBG(ShapeDrawable drawable);
         public ShapeDrawable getBG();
         public void setForecast(JSONArray forecast);

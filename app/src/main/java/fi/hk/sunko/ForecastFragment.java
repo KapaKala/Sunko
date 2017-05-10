@@ -4,13 +4,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Color;
 import android.graphics.Typeface;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -24,6 +20,13 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+/**
+ * Fragment for displaying a 10 day forecast.
+ *
+ * @author Henri Kankaanpää
+ * @version 1.0
+ * @since 1.0
+ */
 public class ForecastFragment extends Fragment {
     RecyclerView rv;
     RVAdapter adapter;
@@ -31,11 +34,15 @@ public class ForecastFragment extends Fragment {
 
     WeatherDisplayHandler weatherDisplayHandler;
 
-    private String title;
-    private int page;
     JSONArray forecast = new JSONArray();
 
-    // newInstance constructor for creating fragment with arguments
+    /**
+     * NewInstance constructor for creating a fragment with arguments.
+     *
+     * @param page the fragment's page
+     * @param title the fragment's title
+     * @return the created fragment itself
+     */
     public static ForecastFragment newInstance(int page, String title) {
         ForecastFragment forecastFragment = new ForecastFragment();
         Bundle args = new Bundle();
@@ -45,22 +52,26 @@ public class ForecastFragment extends Fragment {
         return forecastFragment;
     }
 
+    /**
+     * Helper method for setting the forecast data
+     *
+     * @param forecast the forecast data
+     */
     public void setForecast(JSONArray forecast) {
         this.forecast = forecast;
     }
 
-    // Store instance variables based on arguments passed
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        page = getArguments().getInt("someInt", 0);
-        title = getArguments().getString("someTitle");
-
-
-    }
-
-
-    // Inflate the view for the fragment based on layout XML
+    /**
+     * Override method for the onCreateView lifecycle method.
+     *
+     * Inflates the view, as well as creates a broadcast listener for weather info coming from
+     * the location service.
+     *
+     * @param inflater inflater used to inflate the view
+     * @param container not used
+     * @param savedInstanceState not used
+     * @return the view itself
+     */
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -74,24 +85,29 @@ public class ForecastFragment extends Fragment {
         LocalBroadcastManager.getInstance(getContext()).registerReceiver(new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                System.out.println("WEATHER RECEIVED IN FORECASTFRAGMENT");
                 final Intent finalIntent = intent;
 
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        String jsonArray = finalIntent.getStringExtra("forecast");
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            String error = finalIntent.getStringExtra("error");
 
-                        try {
-                            JSONArray array = new JSONArray(jsonArray);
-                            forecast = array;
-                        } catch (JSONException e) {
-                            e.printStackTrace();
+                            if (error == null) {
+                                String jsonArray = finalIntent.getStringExtra("forecast");
+
+                                try {
+                                    forecast = new JSONArray(jsonArray);
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+
+                                setUpRv(forecast);
+                            }
                         }
+                    });
+                }
 
-                        setUpRv(forecast);
-                    }
-                });
 
             }
         }, new IntentFilter("weatherInfo"));
@@ -99,6 +115,10 @@ public class ForecastFragment extends Fragment {
         return view;
     }
 
+    /**
+     * Override method for the onResume lifecycle method. Checks if MainActivity has weather data,
+     * sets up the recycler view with the data if present.
+     */
     @Override
     public void onResume() {
         super.onResume();
@@ -117,6 +137,11 @@ public class ForecastFragment extends Fragment {
 
     }
 
+    /**
+     * Sets up the RecyclerView with the provided forecast data.
+     *
+     * @param setUpForecast forecast data
+     */
     private void setUpRv(JSONArray setUpForecast) {
         adapter = new RVAdapter(setUpForecast);
         rv.setAdapter(adapter);
@@ -126,7 +151,7 @@ public class ForecastFragment extends Fragment {
 
 
     /**
-     * Recycler view inner class that handles it's app logic.
+     * Recycler view adapter that handles what is displayed in the recycler view.
      */
     class RVAdapter extends RecyclerView.Adapter<RVAdapter.ForecastHolder>{
         JSONArray forecast;
@@ -134,7 +159,7 @@ public class ForecastFragment extends Fragment {
         /**
          * Constructor for the adapter
          *
-         * @param forecast Forecast data to be displayed
+         * @param forecast forecast data to be displayed
          */
         RVAdapter(JSONArray forecast) {
             this.forecast = forecast;
@@ -143,9 +168,9 @@ public class ForecastFragment extends Fragment {
         /**
          * Override method for creating RV's view holders.
          *
-         * @param parent Parent view group, in this case the main activity
-         * @param viewType The type of view
-         * @return The inflated holder view
+         * @param parent parent view group, in this case the main activity
+         * @param viewType the type of view
+         * @return the inflated holder view
          */
         @Override
         public ForecastHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -155,19 +180,28 @@ public class ForecastFragment extends Fragment {
         }
 
         /**
-         * Override method for binding the view holders.
+         * Override method for binding the view holders. Sets up the displaying of the forecast
+         * information.
          *
-         * @param holder The holder to be bound
-         * @param position A self-increasing integer for iterating through the holders
+         * @param holder the holder to be bound
+         * @param position a self-increasing integer for iterating through the holders
          */
         @Override
         public void onBindViewHolder(ForecastHolder holder, int position) {
             try {
                 JSONObject dayforecast = (JSONObject) forecast.get(position);
-                String highTemp = dayforecast.getJSONObject("high").getString("celsius").equals("") ? "-" :
-                        dayforecast.getJSONObject("high").getString("celsius") + "°";
+                String highTemp = dayforecast.getJSONObject("high").getString(
+                        ((MainActivity)getActivity()).prefs.getString(((MainActivity)getActivity()).tempFormatKey, "c").equals("c")
+                                ? "celsius"
+                                : "fahrenheit"
+                ).equals("") ? "-" :
+                        dayforecast.getJSONObject("high").getString(((MainActivity)getActivity()).prefs.getString(((MainActivity)getActivity()).tempFormatKey, "c").equals("c")
+                                ? "celsius"
+                                : "fahrenheit") + "°";
                 String lowTemp = dayforecast.getJSONObject("low").getString("celsius").equals("") ? "-" :
-                        dayforecast.getJSONObject("low").getString("celsius") + "°";
+                        dayforecast.getJSONObject("low").getString(((MainActivity)getActivity()).prefs.getString(((MainActivity)getActivity()).tempFormatKey, "c").equals("c")
+                                ? "celsius"
+                                : "fahrenheit") + "°";
                 holder.thv.setText(highTemp);
                 holder.tlv.setText(lowTemp);
                 holder.iv.setImageResource(weatherDisplayHandler.setImage(dayforecast.getString("conditions"), 12, 6, 21));
@@ -187,7 +221,7 @@ public class ForecastFragment extends Fragment {
         /**
          * Getter for amount of items in the recycler view.
          *
-         * @return Amount of items in the view
+         * @return amount of items in the view
          */
         @Override
         public int getItemCount() {
@@ -207,7 +241,7 @@ public class ForecastFragment extends Fragment {
             /**
              * Constructor for the view holder.
              *
-             * @param itemView The view that is inflated into the holders
+             * @param itemView the view that is inflated into the holders
              */
             ForecastHolder(View itemView) {
                 super(itemView);
@@ -216,7 +250,6 @@ public class ForecastFragment extends Fragment {
                 dv = (TextView) itemView.findViewById(R.id.rvdv);
                 dnv = (TextView) itemView.findViewById(R.id.rvdnv);
                 iv = (ImageView) itemView.findViewById(R.id.rviv);
-
             }
         }
     }

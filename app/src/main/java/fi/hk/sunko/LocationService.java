@@ -1,9 +1,11 @@
 package fi.hk.sunko;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.app.IntentService;
 import android.app.Service;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -12,6 +14,7 @@ import android.location.LocationManager;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.LocalBroadcastManager;
@@ -46,15 +49,13 @@ public class LocationService extends Service implements LocationListener {
     /**
      * Override method for the onStartCommand lifecycle method, ran when service is started.
      *
-     * @param intent The intent passed to the service
-     * @param flags Possible flags passed to the service
-     * @param startId Possible start ID passed to the service
-     * @return Tells the application what to do if it needs to kill the service
+     * @param intent the intent passed to the service
+     * @param flags possible flags passed to the service
+     * @param startId possible start ID passed to the service
+     * @return tells the application what to do if it needs to kill the service
      */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
-        Toast.makeText(getApplicationContext(), "Location Service Started", Toast.LENGTH_LONG).show();
 
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         usingLocation = intent.getBooleanExtra("usingLocation", true);
@@ -75,8 +76,8 @@ public class LocationService extends Service implements LocationListener {
      * locational weather info or from a specific city/area. This information is then sent back to
      * the main activity through a broadcast manager.
      *
-     * @param param1 Either latitude or country name
-     * @param param2 Either longitude or city name
+     * @param param1 either latitude or country name
+     * @param param2 either longitude or city name
      */
     public void getWeatherInfo(Object param1, Object param2) {
         final String url;
@@ -94,41 +95,60 @@ public class LocationService extends Service implements LocationListener {
             public void run() {
                 try {
                     JSONObject info = getter.execute(url).get();
-                    JSONObject currentObservation = info.getJSONObject("current_observation");
+                    if (info == null) {
+                        Intent intent = new Intent("weatherInfo");
+                        intent.putExtra("error", "Couldn't retrieve weather data, check your internet connection");
+                        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+                    } else {
+                        JSONObject currentObservation = info.getJSONObject("current_observation");
 
 //                    Toast.makeText(getApplicationContext(), "Updated", Toast.LENGTH_LONG).show();
 
-                    String location = currentObservation.getJSONObject("display_location").getString("full");
-                    String weather = currentObservation.getString("weather").equals("") ? "Clear" : currentObservation.getString("weather");
-                    String temperature = currentObservation.getString("temp_c").equals("") ? "?" : currentObservation.getString("temp_c");
+                        String location = currentObservation.getJSONObject("display_location").getString("full");
+                        String weather = currentObservation.getString("weather").equals("") ? "Clear" : currentObservation.getString("weather");
+                        String temperature = currentObservation.getString(
+                                "temp_" + LocationService.this.getApplicationContext()
+                                        .getSharedPreferences("fi.hk.sunko", Context.MODE_PRIVATE)
+                                        .getString("fi.hk.sunko.tempformat", "c")).equals("")
+                                ? "?"
+                                : currentObservation.getString(
+                                "temp_" + LocationService.this.getApplicationContext()
+                                        .getSharedPreferences("fi.hk.sunko", Context.MODE_PRIVATE)
+                                        .getString("fi.hk.sunko.tempformat", "c"));
 
-                    JSONObject sunPhase = info.getJSONObject("moon_phase");
-                    double currentHour = Double.parseDouble(sunPhase.getJSONObject("current_time").getInt("hour") + "."
-                            + sunPhase.getJSONObject("current_time").getInt("minute"));
-                    double sunrise = Double.parseDouble(sunPhase.getJSONObject("sunrise").getInt("hour") + "."
-                            + sunPhase.getJSONObject("sunrise").getInt("minute"));
-                    double sunset = Double.parseDouble(sunPhase.getJSONObject("sunset").getInt("hour") + "."
-                            + sunPhase.getJSONObject("sunset").getInt("minute"));
+                        System.out.println("TEMPERATURE IS " + temperature + ", FORMAT IS " + LocationService.this.getApplicationContext()
+                                .getSharedPreferences("fi.hk.sunko", Context.MODE_PRIVATE)
+                                .getString("fi.hk.sunko.tempformat", "c"));
 
-                    JSONArray forecast = info.getJSONObject("forecast").getJSONObject("simpleforecast").getJSONArray("forecastday");
-                    JSONArray hourly = info.getJSONArray("hourly_forecast");
+                        JSONObject sunPhase = info.getJSONObject("moon_phase");
+                        double currentHour = Double.parseDouble(sunPhase.getJSONObject("current_time").getInt("hour") + "."
+                                + sunPhase.getJSONObject("current_time").getInt("minute"));
+                        double sunrise = Double.parseDouble(sunPhase.getJSONObject("sunrise").getInt("hour") + "."
+                                + sunPhase.getJSONObject("sunrise").getInt("minute"));
+                        double sunset = Double.parseDouble(sunPhase.getJSONObject("sunset").getInt("hour") + "."
+                                + sunPhase.getJSONObject("sunset").getInt("minute"));
 
-                    Intent intent = new Intent("weatherInfo");
-                    intent.putExtra("location", location);
-                    intent.putExtra("weatherType", weather);
-                    intent.putExtra("temperature", temperature);
-                    intent.putExtra("currentHour", currentHour);
-                    intent.putExtra("sunrise", sunrise);
-                    intent.putExtra("sunset", sunset);
-                    intent.putExtra("forecast", forecast.toString());
-                    intent.putExtra("hourly", hourly.toString());
-                    LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+                        JSONArray forecast = info.getJSONObject("forecast").getJSONObject("simpleforecast").getJSONArray("forecastday");
+                        JSONArray hourly = info.getJSONArray("hourly_forecast");
+
+                        Intent intent = new Intent("weatherInfo");
+                        intent.putExtra("location", location);
+                        intent.putExtra("weatherType", weather);
+                        intent.putExtra("temperature", temperature);
+                        intent.putExtra("currentHour", currentHour);
+                        intent.putExtra("sunrise", sunrise);
+                        intent.putExtra("sunset", sunset);
+                        intent.putExtra("forecast", forecast.toString());
+                        intent.putExtra("hourly", hourly.toString());
+                        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+                    }
+
                 } catch (InterruptedException | ExecutionException e) {
                     e.printStackTrace();
                 } catch (JSONException e) {
                     e.printStackTrace();
                     Intent intent = new Intent("weatherInfo");
-                    intent.putExtra("error", "No weather info was found, sorry!");
+                    intent.putExtra("error", "No weather info found, try again");
                     LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
                 }
             }
@@ -139,8 +159,8 @@ public class LocationService extends Service implements LocationListener {
     /**
      * Checks wether or not permission has been given to use location services.
      *
-     * @param context Application context
-     * @return Whether or not permission has been given
+     * @param context application context
+     * @return true if permissions are given, false if not
      */
     public static boolean checkPermission(final Context context) {
         return ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -161,7 +181,7 @@ public class LocationService extends Service implements LocationListener {
             isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
             if (!isGPSEnabled && !isNetworkEnabled) {
-                //do nothing
+
             } else {
                 this.canGetLocation = true;
 
@@ -215,8 +235,8 @@ public class LocationService extends Service implements LocationListener {
     /**
      * Override method for when the service gets bound.
      *
-     * @param intent Intent passed when binding
-     * @return Null
+     * @param intent intent passed when binding
+     * @return null
      */
     @Nullable
     @Override
@@ -227,7 +247,7 @@ public class LocationService extends Service implements LocationListener {
     /**
      * Override method for location changes.
      *
-     * @param location Fetches new location info if location changed.
+     * @param location fetches new location info if location changed
      */
     @Override
     public void onLocationChanged(Location location) {
@@ -243,9 +263,9 @@ public class LocationService extends Service implements LocationListener {
     /**
      * Override method for provider status changes.
      *
-     * @param provider The name of the provider that changed
-     * @param status New status of the provider
-     * @param extras Any extras that might get passed
+     * @param provider the name of the provider that changed
+     * @param status new status of the provider
+     * @param extras any extras that might get passed
      */
     @Override
     public void onStatusChanged(String provider, int status, Bundle extras) {
@@ -255,7 +275,7 @@ public class LocationService extends Service implements LocationListener {
     /**
      * Overrider method for when a provider gets enabled.
      *
-     * @param provider The name of the provider
+     * @param provider the name of the provider
      */
     @Override
     public void onProviderEnabled(String provider) {
@@ -269,7 +289,7 @@ public class LocationService extends Service implements LocationListener {
     /**
      * Overrider method for when a provider gets disabled.
      *
-     * @param provider The name of the provider
+     * @param provider the name of the provider
      */
     @Override
     public void onProviderDisabled(String provider) {
@@ -279,5 +299,4 @@ public class LocationService extends Service implements LocationListener {
             isNetworkEnabled = false;
         }
     }
-
 }

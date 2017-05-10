@@ -29,8 +29,8 @@ class WeatherGetter extends AsyncTask<String, Void, JSONObject> {
      * Uses the URL received as a parameter to build a HttpURLConnection to the Weather Underground
      * API, reads the results, and sends them to the invoker of the class as a JSONObject.
      *
-     * @param params A possible array of String parameters, in this case a single URL.
-     * @return The retrieved weather data as a JSONObject
+     * @param params a possible array of String parameters, in this case a single URL
+     * @return the retrieved weather data as a JSONObject
      */
     @Override
     protected JSONObject doInBackground(String... params) {
@@ -71,7 +71,7 @@ class WeatherGetter extends AsyncTask<String, Void, JSONObject> {
     /**
      * Override method for when the task is done.
      *
-     * @param r Returns the result to the super class
+     * @param r the result
      */
     @Override
     protected void onPostExecute(JSONObject r) {
