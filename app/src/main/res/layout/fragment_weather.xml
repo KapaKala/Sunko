@@ -136,9 +136,7 @@
         android:textColor="@android:color/background_light"
         android:textSize="16sp"/>
 
-
-
-    <ScrollView android:layout_height="100dp"
+    <ScrollView android:layout_height="110dp"
         android:layout_width="match_parent"
         android:layout_alignParentBottom="true"
         android:layout_marginBottom="30dp">

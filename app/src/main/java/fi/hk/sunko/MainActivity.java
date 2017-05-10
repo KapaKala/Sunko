@@ -31,7 +31,6 @@ public class MainActivity extends AppCompatActivity implements WeatherFragment.B
     SharedPreferences prefs;
     final String tempFormatKey = "fi.hk.sunko.tempformat";
 
-
     /**
      * Checks wether or not permission has been given to use location services.
      *
@@ -160,6 +159,11 @@ public class MainActivity extends AppCompatActivity implements WeatherFragment.B
         return background;
     }
 
+    /**
+     * Override method for helper interface's forecast setter. When the weather fragment sends
+     * forecast data through this, it is then sent to the forecast fragment, if it's not null.
+     * @param forecast
+     */
     @Override
     public void setForecast(JSONArray forecast) {
         this.forecast = forecast;
@@ -188,17 +192,31 @@ public class MainActivity extends AppCompatActivity implements WeatherFragment.B
     private static class MyPagerAdapter extends FragmentPagerAdapter {
         private static int NUM_ITEMS = 2;
 
+        /**
+         * Default constructor.
+         *
+         * @param fragmentManager fragment manager for managing fragments
+         */
         private MyPagerAdapter(FragmentManager fragmentManager) {
             super(fragmentManager);
         }
 
-        // Returns total number of pages
+        /**
+         * Returns the total number of pages.
+         *
+         * @return total number of pages
+         */
         @Override
         public int getCount() {
             return NUM_ITEMS;
         }
 
-        // Returns the fragment to display for that page
+        /**
+         * Returns the fragment to be displayed for that page.
+         *
+         * @param position the page number to be displayed
+         * @return the fragment to be displayed
+         */
         @Override
         public Fragment getItem(int position) {
             switch (position) {
@@ -211,7 +229,12 @@ public class MainActivity extends AppCompatActivity implements WeatherFragment.B
             }
         }
 
-        // Returns the page title for the top indicator
+        /**
+         * Returns the title name for a tab bar, which is not used here.
+         *
+         * @param position the current page
+         * @return page title
+         */
         @Override
         public CharSequence getPageTitle(int position) {
             return "Page " + position;
